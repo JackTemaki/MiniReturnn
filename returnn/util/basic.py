@@ -214,34 +214,6 @@ def describe_returnn_version():
     return __long_version__
 
 
-def describe_tensorflow_version():
-    """
-    :rtype: str
-    """
-    try:
-        import tensorflow as tf
-    except ImportError:
-        return "<TensorFlow ImportError>"
-    try:
-        tdir = os.path.dirname(tf.__file__)
-    except Exception as e:
-        tdir = "<unknown(exception: %r)>" % e
-    version = getattr(tf, "__version__", "<unknown version>")
-    version += " (%s)" % getattr(tf, "__git_version__", "<unknown git version>")
-    try:
-        if tdir.startswith("<"):
-            git_info = "<unknown-dir>"
-        elif os.path.exists(tdir + "/../.git"):
-            git_info = "git:" + git_describe_head_version(git_dir=tdir)
-        elif "/site-packages/" in tdir:
-            git_info = "<site-package>"
-        else:
-            git_info = "<not-under-git>"
-    except Exception as e:
-        git_info = "<unknown(git exception: %r)>" % e
-    return "%s (%s in %s)" % (version, git_info, tdir)
-
-
 def describe_torch_version():
     """
     :rtype: str
@@ -269,17 +241,6 @@ def describe_torch_version():
     except Exception as e:
         git_info = "<unknown(git exception: %r)>" % e
     return "%s (%s in %s)" % (version, git_info, tdir)
-
-
-def get_tensorflow_version_tuple():
-    """
-    :return: tuple of ints, first entry is the major version
-    :rtype: tuple[int]
-    """
-    import tensorflow as tf
-    import re
-
-    return tuple([int(re.sub("(-rc[0-9]|-dev[0-9]*)", "", s)) for s in tf.__version__.split(".")])
 
 
 def eval_shell_env(token):
@@ -722,27 +683,6 @@ def progress_bar_with_time(complete=1.0, prefix="", **kwargs):
     progress_bar(complete, prefix=prefix, **kwargs)
 
 
-def available_physical_memory_in_bytes():
-    """
-    :rtype: int
-    """
-    # noinspection PyBroadException
-    try:
-        mem_bytes = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
-    except Exception:
-        mem_bytes = 1024**4  # just some random number, 1TB
-    return mem_bytes
-
-
-def default_cache_size_in_gbytes(factor=0.7):
-    """
-    :param float|int factor:
-    :rtype: int
-    """
-    mem_gbytes = available_physical_memory_in_bytes() / (1024.0**3)
-    return int(mem_gbytes * factor)
-
-
 def better_repr(o):
     """
     The main difference to :func:`repr`: this one is deterministic.
@@ -826,18 +766,6 @@ class DictAsObj:
         :param dict[str] dikt:
         """
         self.__dict__ = dikt
-
-
-def dict_joined(*ds):
-    """
-    :param dict[T,V] ds:
-    :return: all dicts joined together
-    :rtype: dict[T,V]
-    """
-    res = {}
-    for d in ds:
-        res.update(d)
-    return res
 
 
 def obj_diff_str(self, other, **kwargs):
@@ -988,26 +916,6 @@ def obj_diff_list(self, other, **kwargs):
     return []
 
 
-def find_ranges(ls):
-    """
-    :type ls: list[int]
-    :returns list of ranges (start,end) where end is exclusive
-    such that the union of range(start,end) matches l.
-    :rtype: list[(int,int)]
-    We expect that the incoming list is sorted and strongly monotonic increasing.
-    """
-    if not ls:
-        return []
-    ranges = [(ls[0], ls[0])]
-    for k in ls:
-        assert k >= ranges[-1][1]  # strongly monotonic increasing
-        if k == ranges[-1][1]:
-            ranges[-1] = (ranges[-1][0], k + 1)
-        else:
-            ranges += [(k, k + 1)]
-    return ranges
-
-
 _thread_join_hack_installed = False
 
 
@@ -1130,19 +1038,6 @@ def init_thread_join_hack():
         Lock.acquire = lock_acquire_hacked
 
 
-def start_daemon_thread(target, args=()):
-    """
-    :param ()->None target:
-    :param tuple args:
-    :return: nothing
-    """
-    from threading import Thread
-
-    t = Thread(target=target, args=args)
-    t.daemon = True
-    t.start()
-
-
 def is_quitting():
     """
     :return: whether we are currently quitting (via :func:`rnn.finalize`)
@@ -1180,58 +1075,6 @@ def interrupt_main():
         sys.exit(1)  # And exit the thread.
 
 
-class AsyncThreadRun(threading.Thread):
-    """
-    Daemon thread, wrapping some function ``func`` via :func:`wrap_async_func`.
-    """
-
-    def __init__(self, name, func):
-        """
-        :param str name:
-        :param ()->T func:
-        """
-        super(AsyncThreadRun, self).__init__(name=name, target=self.main)
-        self.func = func
-        self.result = None
-        self.daemon = True
-        self.start()
-
-    def main(self):
-        """
-        Thread target function.
-
-        :return: nothing, will just set self.result
-        """
-        self.result = wrap_async_func(self.func)
-
-    def get(self):
-        """
-        :return: joins the thread, and then returns the result
-        :rtype: T
-        """
-        self.join()
-        return self.result
-
-
-def wrap_async_func(f):
-    """
-    Calls ``f()`` and returns the result.
-    Wrapped up with catching all exceptions, printing stack trace, and :func:`interrupt_main`.
-
-    :param ()->T f:
-    :rtype: T
-    """
-    # noinspection PyBroadException
-    try:
-        import better_exchook
-
-        better_exchook.install()
-        return f()
-    except Exception:
-        sys.excepthook(*sys.exc_info())
-        interrupt_main()
-
-
 def try_run(func, args=(), catch_exc=Exception, default=None):
     """
     :param ((X)->T) func:
@@ -1246,35 +1089,6 @@ def try_run(func, args=(), catch_exc=Exception, default=None):
         return func(*args)
     except catch_exc:
         return default
-
-
-def validate_broadcast_all_sources(allow_broadcast_all_sources, inputs, common):
-    """
-    Call this when all inputs to some operation (layer) must be broadcasted.
-    It checks whether broadcasting to all sources should be allowed.
-    E.g. for input [B,T1,D1] + [B,T2,D2], when allowed, it would broadcast to [B,T1,T2,D1,D2].
-    When not allowed, there must be at least one source where no broadcasting will be done.
-    Whether it is allowed, this depends on the behavior version.
-      https://github.com/rwth-i6/returnn/issues/691
-
-    Common usages are for :func:`get_common_shape` or :func:`Data.get_common_data`.
-
-    :param bool|NotSpecified allow_broadcast_all_sources:
-    :param inputs: anything convertible to iterable of str, used for reporting
-    :param common: anything convertible to str, used for reporting
-    """
-    msg = (
-        "All inputs\n%s\nrequire broadcasting to \n  %s.\n" % ("\n".join(" - %s" % inp for inp in inputs), common)
-        + "This must be explicitly allowed, e.g. by specifying out_shape."
-    )
-    if allow_broadcast_all_sources is NotSpecified:
-        from returnn.util import BehaviorVersion
-
-        BehaviorVersion.require(version=4, condition=False, message=msg)
-        return
-    if allow_broadcast_all_sources:
-        return
-    raise Exception(msg)
 
 
 def class_idx_seq_to_1_of_k(seq, num_classes):
@@ -1304,26 +1118,6 @@ def uniq(seq):
     diffs[1:] = seq[1:] - seq[:-1]
     idx = diffs.nonzero()
     return seq[idx]
-
-
-def uniq_generic(seq):
-    """
-    Like Unix tool uniq. Removes repeated entries.
-    See :func:`uniq` for an efficient Numpy implementation.
-    See :func:`returnn.tf.util.basic.uniq` for an efficient TF implementation.
-
-    :param list[T]|tuple[T] seq:
-    :return: seq
-    :rtype: list[T]
-    """
-    out = []
-    visited = set()
-    for x in seq:
-        if x in visited:
-            continue
-        out.append(x)
-        visited.add(x)
-    return out
 
 
 def slice_pad_zeros(x, begin, end, axis=0):
@@ -1394,19 +1188,6 @@ def inplace_increment(x, idx, y):
     :rtype: numpy.ndarray
     """
     raise NotImplementedError("This feature was removed with dropped Theano support")
-
-
-def prod(ls):
-    """
-    :param list[T]|tuple[T]|numpy.ndarray ls:
-    :rtype: T|int|float
-    """
-    if len(ls) == 0:
-        return 1
-    x = ls[0]
-    for y in ls[1:]:
-        x *= y
-    return x
 
 
 def parse_orthography_into_symbols(
@@ -1546,25 +1327,6 @@ def json_remove_comments(string, strip_space=True):
     return "".join(new_str)
 
 
-def _py2_unicode_to_str_recursive(s):
-    """
-    This is supposed to be run with Python 2.
-    Also see :func:`as_str` and :func:`py2_utf8_str_to_unicode`.
-
-    :param str|unicode s: or any recursive structure such as dict, list, tuple
-    :return: Python 2 str (is like Python 3 UTF-8 formatted bytes)
-    :rtype: str
-    """
-    if isinstance(s, dict):
-        return {_py2_unicode_to_str_recursive(key): _py2_unicode_to_str_recursive(value) for key, value in s.items()}
-    elif isinstance(s, (list, tuple)):
-        return make_seq_of_type(type(s), [_py2_unicode_to_str_recursive(element) for element in s])
-    elif isinstance(s, unicode):
-        return s.encode("utf-8")  # Python 2 str, Python 3 bytes
-    else:
-        return s
-
-
 def load_json(filename=None, content=None):
     """
     :param str|None filename:
@@ -1582,8 +1344,6 @@ def load_json(filename=None, content=None):
         json_content = json.loads(content)
     except ValueError as e:
         raise Exception("config looks like JSON but invalid json content, %r" % e)
-    if not PY3:
-        json_content = _py2_unicode_to_str_recursive(json_content)
     return json_content
 
 
@@ -2016,39 +1776,6 @@ def getargspec(func):
         return inspect.getargspec(func)
 
 
-def collect_mandatory_class_init_kwargs(cls):
-    """
-    :param type cls:
-    :return: list of kwargs which have no default, i.e. which must be provided
-    :rtype: list[str]
-    """
-    all_kwargs = collect_class_init_kwargs(cls, only_with_default=False)
-    default_kwargs = collect_class_init_kwargs(cls, only_with_default=True)
-    mandatory_kwargs = []
-    for arg in all_kwargs:
-        if arg not in default_kwargs:
-            mandatory_kwargs.append(arg)
-    return mandatory_kwargs
-
-
-def help_on_type_error_wrong_args(cls, kwargs):
-    """
-    :param type cls:
-    :param list[str] kwargs:
-    """
-    mandatory_args = collect_mandatory_class_init_kwargs(cls)
-    for arg in kwargs:
-        if arg in mandatory_args:
-            mandatory_args.remove(arg)
-    all_kwargs = collect_class_init_kwargs(cls)
-    unknown_args = []
-    for arg in kwargs:
-        if arg not in all_kwargs:
-            unknown_args.append(arg)
-    if mandatory_args or unknown_args:
-        print("Args mismatch? Missing are %r, unknowns are %r. Kwargs %r." % (mandatory_args, unknown_args, kwargs))
-
-
 def custom_exec(source, source_filename, user_ns, user_global_ns):
     """
     :param str source:
@@ -2131,82 +1858,6 @@ class RefIdEq(Generic[T]):
         return id(self.obj)
 
 
-class DictRefKeys(Generic[K, V]):
-    """
-    Like `dict`, but hash and equality of the keys
-    """
-
-    def __init__(self):
-        self._d = {}  # type: Dict[RefIdEq[K], V]
-
-    def __repr__(self):
-        return "DictRefKeys(%s)" % ", ".join(["%r: %r" % (k, v) for (k, v) in self.items()])
-
-    def items(self) -> Iterable[Tuple[K, V]]:
-        """items"""
-        for k, v in self._d.items():
-            yield k.obj, v
-
-    def keys(self) -> Iterable[K]:
-        """keys"""
-        for k in self._d.keys():
-            yield k.obj
-
-    def values(self) -> Iterable[V]:
-        """values"""
-        for v in self._d.values():
-            yield v
-
-    def __getitem__(self, item: K) -> V:
-        return self._d[RefIdEq(item)]
-
-    def __setitem__(self, key: K, value: V):
-        self._d[RefIdEq(key)] = value
-
-    def __contains__(self, item: K):
-        return RefIdEq(item) in self._d
-
-
-def make_dll_name(basename):
-    """
-    :param str basename:
-    :return: e.g. "lib%s.so" % basename, depending on sys.platform
-    :rtype: str
-    """
-    if sys.platform == "darwin":
-        return "lib%s.dylib" % basename
-    elif sys.platform == "win32":
-        return "%s.dll" % basename
-    else:  # Linux, Unix
-        return "lib%s.so" % basename
-
-
-def escape_c_str(s):
-    """
-    :param str s:
-    :return: C-escaped str
-    :rtype: str
-    """
-    return '"%s"' % s.replace("\\\\", "\\").replace("\n", "\\n").replace('"', '\\"').replace("'", "\\'")
-
-
-def attr_chain(base, attribs):
-    """
-    :param object base:
-    :param list[str]|tuple[str]|str attribs:
-    :return: getattr(getattr(object, attribs[0]), attribs[1]) ...
-    :rtype: object
-    """
-    if not isinstance(attribs, (list, tuple)):
-        assert isinstance(attribs, str)
-        attribs = [attribs]
-    else:
-        attribs = list(attribs)
-    for i in range(len(attribs)):
-        base = getattr(base, attribs[i])
-    return base
-
-
 def to_bool(v):
     """
     :param int|float|str v: if it is a string, it should represent some integer, or alternatively "true" or "false"
@@ -2223,19 +1874,6 @@ def to_bool(v):
         if v in ["false", "no", "off", "0"]:
             return False
     raise ValueError("to_bool cannot handle %r" % v)
-
-
-def as_str(s):
-    """
-    :param str|unicode|bytes s:
-    :rtype: str|unicode
-    """
-    if isinstance(s, str) or "unicode" in str(type(s)):
-        return s
-    if isinstance(s, bytes) or isinstance(s, unicode):
-        # noinspection PyUnresolvedReferences
-        return s.decode("utf8")
-    assert False, "unknown type %s" % type(s)
 
 
 def py2_utf8_str_to_unicode(s):
@@ -2284,56 +1922,6 @@ def unicode_to_str(s):
     assert isinstance(s, str)
     return s
 
-
-def deepcopy(x, stop_types=None):
-    """
-    Simpler variant of copy.deepcopy().
-    Should handle some edge cases as well, like copying module references.
-
-    :param T x: an arbitrary object
-    :param list[type]|None stop_types: objects of these types will not be deep-copied, only the reference is passed
-    :rtype: T
-    """
-    # See also class Pickler from TaskSystem.
-    # Or: https://mail.python.org/pipermail/python-ideas/2013-July/021959.html
-    from .task_system import Pickler, Unpickler
-
-    persistent_memo = {}  # id -> obj
-
-    def persistent_id(obj):
-        """
-        :param object obj:
-        :rtype: int|None
-        """
-        if stop_types and isinstance(obj, tuple(stop_types)):
-            persistent_memo[id(obj)] = obj
-            return id(obj)
-        return None
-
-    def pickle_dumps(obj):
-        """
-        :param object obj:
-        :rtype: bytes
-        """
-        sio = BytesIO()
-        p = Pickler(sio)
-        p.persistent_id = persistent_id
-        p.dump(obj)
-        return sio.getvalue()
-
-    # noinspection PyShadowingNames
-    def pickle_loads(s):
-        """
-        :param bytes s:
-        :rtype: object
-        """
-        p = Unpickler(BytesIO(s))
-        p.persistent_load = persistent_memo.__getitem__
-        return p.load()
-
-    s = pickle_dumps(x)
-    c = pickle_loads(s)
-    return c
 
 
 def load_txt_vector(filename):
@@ -2506,157 +2094,6 @@ def pip_check_is_installed(pkg_name):
                 _pip_installed_packages.add(line)
     return pkg_name in _pip_installed_packages
 
-
-_original_execv = None
-_original_execve = None
-_original_execvpe = None
-
-
-def overwrite_os_exec(prefix_args):
-    """
-    :param list[str] prefix_args:
-    """
-    global _original_execv, _original_execve, _original_execvpe
-    if not _original_execv:
-        _original_execv = os.execv
-    if not _original_execve:
-        _original_execve = os.execve
-    if not _original_execvpe:
-        # noinspection PyProtectedMember,PyUnresolvedReferences
-        _original_execvpe = os._execvpe
-
-    # noinspection PyUnusedLocal
-    def wrapped_execvpe(file, args, env=None):
-        """
-        :param file:
-        :param list[str]|tuple[str] args:
-        :param dict[str] env:
-        """
-        new_args = prefix_args + [which(args[0])] + args[1:]
-        sys.stderr.write("$ %s\n" % " ".join(new_args))
-        sys.stderr.flush()
-        _original_execvpe(file=prefix_args[0], args=new_args, env=env)
-
-    def execv(path, args):
-        """
-        :param str path:
-        :param list[str]|tuple[str] args:
-        """
-        if args[: len(prefix_args)] == prefix_args:
-            _original_execv(path, args)
-        else:
-            wrapped_execvpe(path, args)
-
-    def execve(path, args, env):
-        """
-        :param str path:
-        :param list[str]|tuple[str] args:
-        :param dict[str] env:
-        """
-        if args[: len(prefix_args)] == prefix_args:
-            _original_execve(path, args, env)
-        else:
-            wrapped_execvpe(path, args, env)
-
-    def execl(file, *args):
-        """execl(file, *args)
-
-        Execute the executable file with argument list args, replacing the
-        current process."""
-        os.execv(file, args)
-
-    def execle(file, *args):
-        """execle(file, *args, env)
-
-        Execute the executable file with argument list args and
-        environment env, replacing the current process."""
-        env = args[-1]
-        os.execve(file, args[:-1], env)
-
-    def execlp(file, *args):
-        """execlp(file, *args)
-
-        Execute the executable file (which is searched for along $PATH)
-        with argument list args, replacing the current process."""
-        os.execvp(file, args)
-
-    def execlpe(file, *args):
-        """execlpe(file, *args, env)
-
-        Execute the executable file (which is searched for along $PATH)
-        with argument list args and environment env, replacing the current
-        process."""
-        env = args[-1]
-        os.execvpe(file, args[:-1], env)
-
-    def execvp(file, args):
-        """execvp(file, args)
-
-        Execute the executable file (which is searched for along $PATH)
-        with argument list args, replacing the current process.
-        args may be a list or tuple of strings."""
-        wrapped_execvpe(file, args)
-
-    def execvpe(file, args, env):
-        """execvpe(file, args, env)
-
-        Execute the executable file (which is searched for along $PATH)
-        with argument list args and environment env , replacing the
-        current process.
-        args may be a list or tuple of strings."""
-        wrapped_execvpe(file, args, env)
-
-    os.execv = execv
-    os.execve = execve
-    os.execl = execl
-    os.execle = execle
-    os.execlp = execlp
-    os.execlpe = execlpe
-    os.execvp = execvp
-    os.execvpe = execvpe
-    os._execvpe = wrapped_execvpe
-
-
-def get_lsb_release():
-    """
-    :return: ``/etc/lsb-release`` parsed as a dict
-    :rtype: dict[str,str]
-    """
-    d = {}
-    for line in open("/etc/lsb-release").read().splitlines():
-        k, v = line.split("=", 1)
-        if v[0] == v[-1] == '"':
-            v = v[1:-1]
-        d[k] = v
-    return d
-
-
-def get_ubuntu_major_version():
-    """
-    :rtype: int|None
-    """
-    d = get_lsb_release()
-    if d["DISTRIB_ID"] != "Ubuntu":
-        return None
-    return int(float(d["DISTRIB_RELEASE"]))
-
-
-def auto_prefix_os_exec_prefix_ubuntu(prefix_args, ubuntu_min_version=16):
-    """
-    :param list[str] prefix_args:
-    :param int ubuntu_min_version:
-
-    Example usage:
-      auto_prefix_os_exec_prefix_ubuntu(["/u/zeyer/tools/glibc217/ld-linux-x86-64.so.2"])
-    """
-    ubuntu_version = get_ubuntu_major_version()
-    if ubuntu_version is None:
-        return
-    if ubuntu_version >= ubuntu_min_version:
-        return
-    print("You are running Ubuntu %i, thus we prefix all os.exec with %s." % (ubuntu_version, prefix_args))
-    assert os.path.exists(prefix_args[0])
-    overwrite_os_exec(prefix_args=prefix_args)
 
 
 def cleanup_env_var_path(env_var, path_prefix):
@@ -3163,21 +2600,6 @@ def try_get_stack_frame(depth=1):
         return None
 
 
-def try_get_caller_name(depth=1, fallback=None):
-    """
-    :param int depth:
-    :param str|None fallback: this is returned if we fail for some reason
-    :rtype: str|None
-    :return: caller function name. this is just for debugging
-    """
-    frame = try_get_stack_frame(depth + 1)  # one more to count ourselves
-    if frame:
-        from better_exchook import get_func_str_from_code_object
-
-        return get_func_str_from_code_object(frame.f_code)
-    return fallback
-
-
 class InfiniteRecursionDetected(Exception):
     """
     Raised when an infinite recursion is detected, by guard_infinite_recursion.
@@ -3186,39 +2608,6 @@ class InfiniteRecursionDetected(Exception):
 
 _guard_infinite_recursion_cache = threading.local()
 
-
-@contextlib.contextmanager
-def guard_infinite_recursion(*args):
-    """
-    Registers args (could be func + args) in some cache.
-    If those args are already in the cache, it will raise an exception.
-
-    It will use the id of the args as key and not use any hashing
-    to allow that guard_infinite_recursion can be used
-    to guard custom __hash__ implementations as well.
-    """
-    if not args:
-        raise ValueError("guard_infinite_recursion needs at least one arg")
-    key = tuple(id(arg) for arg in args)
-    if not hasattr(_guard_infinite_recursion_cache, "cache"):
-        _guard_infinite_recursion_cache.cache = set()
-    if key in _guard_infinite_recursion_cache.cache:
-        raise InfiniteRecursionDetected("infinite recursion detected")
-    _guard_infinite_recursion_cache.cache.add(key)
-    try:
-        yield
-    finally:
-        _guard_infinite_recursion_cache.cache.remove(key)
-
-
-def camel_case_to_snake_case(name):
-    """
-    :param str name: e.g. "CamelCase"
-    :return: e.g. "camel_case"
-    :rtype: str
-    """
-    s1 = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
-    return re.sub("([a-z0-9])([A-Z])", r"\1_\2", s1).lower()
 
 
 def get_hostname():
@@ -3292,7 +2681,6 @@ def log_runtime_info_to_dir(path, config):
             "Hostname: %s" % get_hostname(),
             "PID: %i" % os.getpid(),
             "Returnn: %s" % (describe_returnn_version(),),
-            "TensorFlow: %s" % (describe_tensorflow_version(),),
             "Config files: %s" % (config.files,),
         ]
         maybe_make_dirs(path)
@@ -3324,22 +2712,6 @@ def log_runtime_info_to_dir(path, config):
             print("log_runtime_info_to_dir: Error, cannot write: %s" % exc)
         else:
             raise
-
-
-def should_write_to_disk(config):
-    """
-    :param returnn.config.Config config:
-    :rtype: bool
-    """
-    if config.is_true("use_horovod"):
-        # noinspection PyPackageRequirements,PyUnresolvedReferences
-        import horovod.tensorflow as hvd
-
-        if hvd.rank() != 0:
-            return False
-    if config.is_true("dry_run"):
-        return False
-    return True
 
 
 class NativeCodeCompiler(object):
@@ -3926,179 +3298,6 @@ def is_namedtuple(cls):
     return issubclass(cls, tuple) and cls is not tuple
 
 
-def make_seq_of_type(cls, seq):
-    """
-    :param type[T] cls: e.g. tuple, list or namedtuple
-    :param list|tuple|T seq:
-    :return: cls(seq) or cls(*seq)
-    :rtype: T|list|tuple
-    """
-    assert issubclass(cls, (list, tuple))
-    if is_namedtuple(cls):
-        return cls(*seq)  # noqa
-    return cls(seq)  # noqa
-
-
-def ensure_list_of_type(ls, type_):
-    """
-    :param list ls:
-    :param (()->T)|type[T] type_: type of instances of `ls`.
-      Note the strange type here in the docstring is due to some PyCharm type inference problems
-      (https://youtrack.jetbrains.com/issue/PY-50828).
-    :rtype: list[T]
-    """
-    assert all(isinstance(elem, type_) for elem in ls)
-    return ls
-
-
-@contextlib.contextmanager
-def dummy_noop_ctx():
-    """
-    Provides a no-op context manager.
-    """
-    yield None
-
-
-def _get_ngrams(segment, max_order):
-    """Extracts all n-grams upto a given maximum order from an input segment.
-    Code adapted from Google Tensor2Tensor.
-
-    Args:
-      segment (list[int]|list[str]): text segment from which n-grams will be extracted.
-      max_order (int): maximum length in tokens of the n-grams returned by this
-          methods.
-
-    Returns:
-      The Counter containing all n-grams upto max_order in segment
-      with a count of how many times each n-gram occurred.
-    """
-    import collections
-
-    ngram_counts = collections.Counter()
-    for order in range(1, max_order + 1):
-        for i in range(0, len(segment) - order + 1):
-            ngram = tuple(segment[i : i + order])
-            ngram_counts[ngram] += 1
-    return ngram_counts
-
-
-def compute_bleu(reference_corpus, translation_corpus, max_order=4, use_bp=True):
-    """Computes BLEU score of translated segments against one or more references.
-    Code adapted from Google Tensor2Tensor.
-
-    Args:
-      reference_corpus (list[list[int]|list[str]]): list of references for each translation. Each
-          reference should be tokenized into a list of tokens.
-      translation_corpus (list[list[int]|list[str]]): list of translations to score. Each translation
-          should be tokenized into a list of tokens.
-      max_order (int): Maximum n-gram order to use when computing BLEU score.
-      use_bp (bool): boolean, whether to apply brevity penalty.
-
-    Returns:
-      BLEU score.
-    """
-    import math
-
-    reference_length = 0
-    translation_length = 0
-    bp = 1.0
-    geo_mean = 0
-
-    matches_by_order = [0] * max_order
-    possible_matches_by_order = [0] * max_order
-
-    for (references, translations) in zip(reference_corpus, translation_corpus):
-        reference_length += len(references)
-        translation_length += len(translations)
-        ref_ngram_counts = _get_ngrams(references, max_order)
-        translation_ngram_counts = _get_ngrams(translations, max_order)
-
-        overlap = {ngram: min(count, translation_ngram_counts[ngram]) for ngram, count in ref_ngram_counts.items()}
-
-        for ngram in overlap:
-            matches_by_order[len(ngram) - 1] += overlap[ngram]
-        for ngram in translation_ngram_counts:
-            possible_matches_by_order[len(ngram) - 1] += translation_ngram_counts[ngram]
-
-    precisions = [0.0] * max_order
-    smooth = 1.0
-    for i in range(0, max_order):
-        if possible_matches_by_order[i] > 0:
-            precisions[i] = matches_by_order[i] / possible_matches_by_order[i]
-            if matches_by_order[i] > 0:
-                precisions[i] = matches_by_order[i] / possible_matches_by_order[i]
-            else:
-                smooth *= 2
-                precisions[i] = 1.0 / (smooth * possible_matches_by_order[i])
-        else:
-            precisions[i] = 0.0
-
-    if max(precisions) > 0:
-        p_log_sum = sum(math.log(p) for p in precisions if p)
-        geo_mean = math.exp(p_log_sum / max_order)
-
-    if use_bp:
-        ratio = translation_length / reference_length
-        if ratio < 1e-30:
-            bp = 0.0
-        elif ratio < 1.0:
-            bp = math.exp(1 - 1.0 / ratio)
-        else:
-            bp = 1.0
-    bleu = geo_mean * bp
-    return np.float32(bleu)
-
-
-# noinspection PyPackageRequirements
-def monkeyfix_glib():
-    """
-    Fixes some stupid bugs such that SIGINT is not working.
-    This is used by audioread, and indirectly by librosa for loading audio.
-    https://stackoverflow.com/questions/16410852/
-    See also :func:`monkeypatch_audioread`.
-    """
-    try:
-        import gi
-    except ImportError:
-        return
-    try:
-        from gi.repository import GLib
-    except ImportError:
-        # noinspection PyUnresolvedReferences
-        from gi.overrides import GLib
-    # Do nothing.
-    # The original behavior would install a SIGINT handler which calls GLib.MainLoop.quit(),
-    # and then reraise a KeyboardInterrupt in that thread.
-    # However, we want and expect to get the KeyboardInterrupt in the main thread.
-    GLib.MainLoop.__init__ = lambda *args, **kwargs: None
-
-
-def monkeypatch_audioread():
-    """
-    audioread does not behave optimal in some cases.
-    E.g. each call to _ca_available() takes quite long because of the ctypes.util.find_library usage.
-    We will patch this.
-
-    However, the recommendation would be to not use audioread (librosa.load).
-    audioread uses Gstreamer as a backend by default currently (on Linux).
-    Gstreamer has multiple issues. See also :func:`monkeyfix_glib`, and here for discussion:
-    https://github.com/beetbox/audioread/issues/62
-    https://github.com/beetbox/audioread/issues/63
-
-    Instead, use PySoundFile, which is also faster. See here for discussions:
-    https://github.com/beetbox/audioread/issues/64
-    https://github.com/librosa/librosa/issues/681
-    """
-    try:
-        # noinspection PyPackageRequirements
-        import audioread
-    except ImportError:
-        return
-    # noinspection PyProtectedMember
-    res = audioread._ca_available()
-    audioread._ca_available = lambda: res
-
-
 _cf_cache = {}
 _cf_msg_printed = False
 
@@ -4153,180 +3352,3 @@ def binary_search_any(cmp, low, high):
         else:
             return mid
     return low
-
-
-def generic_import_module(filename):
-    """
-    :param str filename:
-      We try to be clever about filename.
-      If it looks like a module name, just do importlib.import_module.
-      If it looks like a filename, search for a base path (which does not have __init__.py),
-      add that path to sys.path if needed, and import the remaining where "/" is replaced by "."
-      and the file extension is removed.
-    :return: the module
-    :rtype: types.ModuleType
-    """
-    assert filename
-    import importlib
-
-    if "/" not in filename:
-        return importlib.import_module(filename)
-    prefix_dir = ""
-    if not os.path.exists(filename):
-        assert filename[0] != "/"
-        # Maybe relative to Returnn?
-        prefix_dir = "%s/" % returnn_root_dir
-    assert os.path.exists(prefix_dir + filename)
-    assert filename.endswith(".py") or os.path.isdir(prefix_dir + filename)
-    dirs = filename.split("/")
-    dirs, base_fn = dirs[:-1], dirs[-1]
-    assert len(dirs) >= 1
-    for i in reversed(range(len(dirs))):
-        d = prefix_dir + "/".join(dirs[: i + 1])
-        assert os.path.isdir(d)
-        if os.path.exists("%s/__init__.py" % d):
-            continue
-        if d not in sys.path:
-            sys.path.append(d)
-        m = ".".join(dirs[i + 1 :] + [base_fn])
-        if base_fn.endswith(".py"):
-            m = m[:-3]
-        return importlib.import_module(m)
-    raise ValueError("cannot figure out base module path from %r" % filename)
-
-
-def softmax(x, axis=None):
-    """
-    :param numpy.ndarray x:
-    :param int|None axis:
-    :rtype: numpy.ndarray
-    """
-    import numpy
-
-    e_x = numpy.exp(x - numpy.max(x, axis=axis, keepdims=True))
-    return e_x / numpy.sum(e_x, axis=axis, keepdims=True)
-
-
-def collect_proc_maps_exec_files():
-    """
-    Currently only works on Linux...
-
-    :return: list of mapped executables (libs)
-    :rtype: list[str]
-    """
-    import re
-
-    pid = os.getpid()
-    fns = []
-    for line in open("/proc/%i/maps" % pid, "r").read().splitlines():  # for each mapped region
-        # https://stackoverflow.com/questions/1401359/understanding-linux-proc-id-maps
-        # address           perms offset  dev   inode   pathname
-        # E.g.:
-        # 7ff2de91c000-7ff2de91e000 rw-p 0017c000 08:02 794844                     /usr/lib/x86_64-linux-gnu/libstdc+...
-        m = re.match(
-            r"^([0-9A-Fa-f]+)-([0-9A-Fa-f]+)\s+([rwxps\-]+)\s+([0-9A-Fa-f]+)\s+([0-9A-Fa-f:]+)\s+([0-9]+)\s*(.*)$", line
-        )
-        assert m, "no match for %r" % line
-        address_start, address_end, perms, offset, dev, i_node, path_name = m.groups()
-        if "x" not in perms:
-            continue
-        if not path_name or path_name.startswith("[") or "(deleted)" in path_name:
-            continue
-        if path_name not in fns:
-            fns.append(path_name)
-    return fns
-
-
-def find_sym_in_exec(fn, sym):
-    """
-    Uses ``objdump`` to list available symbols, and filters them by the given ``sym``.
-
-    :param str fn: path
-    :param str sym:
-    :return: matched out, or None
-    :rtype: str|None
-    """
-    from subprocess import CalledProcessError
-
-    objdump = "objdump -T"
-    if sys.platform == "darwin":
-        objdump = "otool -IHGv"
-    shell_cmd = "%s %s | grep %s" % (objdump, fn, sym)
-    try:
-        out = sys_exec_out(shell_cmd, shell=True)
-    except CalledProcessError:  # none found
-        return None
-    assert isinstance(out, (str, unicode))
-    out_lns = out.splitlines()
-    out_lns = [ln for ln in out_lns if ".text" in ln]  # see objdump
-    out_lns = [ln for ln in out_lns if sym in ln.split()]
-    if not out_lns:
-        return None
-    return "Found %r in %r:\n%s" % (sym, fn, "\n".join(out_lns))
-
-
-def dummy_numpy_gemm_call():
-    """
-    Just performs some GEMM call via Numpy.
-    This makes sure that the BLAS library is loaded.
-    """
-    import numpy
-
-    a = numpy.random.randn(5, 3).astype(numpy.float32)
-    b = numpy.random.randn(3, 7).astype(numpy.float32)
-    c = numpy.dot(a, b)
-    assert numpy.isfinite(c).all()
-
-
-_find_sgemm_lib_from_runtime_cached = None
-
-
-def find_sgemm_libs_from_runtime():
-    """
-    Looks through all libs via :func:`collect_proc_maps_exec_files`,
-    and searches for all which have the ``sgemm`` symbol.
-    Currently only works on Linux (because collect_proc_maps_exec_files).
-
-    :return: list of libs (their path)
-    :rtype: list[str]
-    """
-    if not os.path.exists("/proc"):
-        return None
-    global _find_sgemm_lib_from_runtime_cached
-    if _find_sgemm_lib_from_runtime_cached is not None:
-        return _find_sgemm_lib_from_runtime_cached
-    dummy_numpy_gemm_call()  # make sure that Numpy is loaded and Numpy sgemm is available
-    fns = collect_proc_maps_exec_files()
-    fns_with_sgemm = []
-    for fn in fns:
-        out = find_sym_in_exec(fn, "sgemm_")
-        if out:
-            fns_with_sgemm.append(fn)
-    _find_sgemm_lib_from_runtime_cached = fns_with_sgemm
-    return fns_with_sgemm
-
-
-_find_libcudart_from_runtime_cached = None
-
-
-def find_libcudart_from_runtime():
-    """
-    Looks through all libs via :func:`collect_proc_maps_exec_files`,
-    and searches for all which have the ``sgemm`` symbol.
-    Currently only works on Linux (because collect_proc_maps_exec_files).
-
-    :return: list of libs (their path)
-    :rtype: str|None
-    """
-    if not os.path.exists("/proc"):
-        return None
-    global _find_libcudart_from_runtime_cached
-    if _find_libcudart_from_runtime_cached is not None:
-        return _find_libcudart_from_runtime_cached[0]
-    fns = collect_proc_maps_exec_files()
-    for fn in fns:
-        if re.match(".*/libcudart\\.so(\\..*)?", fn):
-            _find_libcudart_from_runtime_cached = [fn]
-            return fn
-    _find_libcudart_from_runtime_cached = [None]
-    return None

@@ -153,17 +153,6 @@ def test_terminal_size():
     terminal_size()
 
 
-def test_try_get_caller_name():
-    def sub():
-        return try_get_caller_name()
-
-    assert_equal(sub(), "test_try_get_caller_name")
-
-
-def test_camel_case_to_snake_case():
-    assert_equal(camel_case_to_snake_case("CamelCaseOp"), "camel_case_op")
-
-
 def test_NativeCodeCompiler():
     native = NativeCodeCompiler(
         base_name="test_NativeCodeCompiler",
@@ -223,33 +212,6 @@ def test_Stats():
     print("normalized mean/stddev:", mean0, stddev1)
     assert_almost_equal(mean0, 0.0)
     assert_almost_equal(stddev1, 1.0)
-
-
-def test_deepcopy():
-    deepcopy({"a": 1, "b": 2, "c": [3, {}, (), [42, True]]})
-
-
-def test_deepcopy_mod():
-    o = deepcopy({"a": 1, "b": 2, "c": sys})
-    assert isinstance(o, dict)
-    assert o["c"] is sys
-
-
-def test_deepcopy_config():
-    from returnn.config import Config
-
-    config = Config()
-    deepcopy(config)
-
-
-def test_deepcopy_builtins():
-    user_ns = {}
-    custom_exec("", "<source.py>", user_ns, user_ns)
-    print(user_ns)
-    assert "__builtins__" in user_ns
-    assert isinstance(user_ns["__builtins__"], dict)
-    o = deepcopy(user_ns)
-    assert o["__builtins__"] is user_ns["__builtins__"]  # no copy, directly reference this module dict
 
 
 def test_get_func_kwargs():
