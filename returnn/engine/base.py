@@ -11,7 +11,6 @@ from typing import Optional
 from returnn.config import Config, get_global_config
 from returnn.learning_rate_control import load_learning_rate_control_from_config, LearningRateControl
 from returnn.log import log
-from returnn.pretrain import Pretrain
 from returnn.util import basic as util
 
 
@@ -28,7 +27,6 @@ class EngineBase(object):
             config = get_global_config(auto_create=True)
         self.config = config
         self.epoch = 0
-        self.pretrain = None  # type: Optional[Pretrain]
         self.model_filename = None  # type: Optional[str]
         self.learning_rate = 0.0  # set in init_train_epoch
         self.learning_rate_control = None  # type: Optional[LearningRateControl]
@@ -195,18 +193,17 @@ class EngineBase(object):
         return start_epoch, start_batch
 
     @classmethod
-    def epoch_model_filename(cls, model_filename, epoch, is_pretrain):
+    def epoch_model_filename(cls, model_filename, epoch):
         """
         :type model_filename: str
         :type epoch: int
-        :type is_pretrain: bool
         :rtype: str
         """
         if sys.platform == "win32" and model_filename.startswith("/tmp/"):
             import tempfile
 
             model_filename = tempfile.gettempdir() + model_filename[len("/tmp") :]
-        return model_filename + (".pretrain" if is_pretrain else "") + ".%03d" % epoch
+        return model_filename + ".%03d" % epoch
 
     def get_epoch_model_filename(self, epoch=None):
         """
@@ -216,28 +213,12 @@ class EngineBase(object):
         """
         if not epoch:
             epoch = self.epoch
-        return self.epoch_model_filename(self.model_filename, epoch, self.is_pretrain_epoch(epoch=epoch))
+        return self.epoch_model_filename(self.model_filename, epoch)
 
     def get_epoch_str(self):
         """
         :return: e.g. "epoch 3", or "pretrain epoch 5"
         :rtype: str
         """
-        return ("pretrain " if self.is_pretrain_epoch() else "") + "epoch %s" % self.epoch
+        return "epoch %s" % self.epoch
 
-    def is_pretrain_epoch(self, epoch=None):
-        """
-        :param int|None epoch:
-        :return: whether this epoch is covered by the pretrain logic
-        :rtype: bool
-        """
-        if not epoch:
-            epoch = self.epoch
-        return self.pretrain and epoch <= self.pretrain.get_train_num_epochs()
-
-    def is_first_epoch_after_pretrain(self):
-        """
-        :return: whether the current epoch is the first epoch right after pretraining
-        :rtype: bool
-        """
-        return self.pretrain and self.epoch == self.pretrain.get_train_num_epochs() + 1

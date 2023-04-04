@@ -1474,7 +1474,7 @@ def wrap_async_func(f):
     """
     # noinspection PyBroadException
     try:
-        from returnn.util import better_exchook
+        import better_exchook
 
         better_exchook.install()
         return f()
@@ -3423,7 +3423,7 @@ def try_get_caller_name(depth=1, fallback=None):
     """
     frame = try_get_stack_frame(depth + 1)  # one more to count ourselves
     if frame:
-        from .better_exchook import get_func_str_from_code_object
+        from better_exchook import get_func_str_from_code_object
 
         return get_func_str_from_code_object(frame.f_code)
     return fallback

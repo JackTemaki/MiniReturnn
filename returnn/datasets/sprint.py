@@ -779,7 +779,7 @@ class ExternSprintDataset(SprintDatasetBase):
             sys.stdin = sys.__stdin__
             sys.stdout = sys.__stdout__
             sys.stderr = sys.__stderr__
-            from returnn.util import better_exchook
+            import better_exchook
 
             better_exchook.install()
             # noinspection PyBroadException

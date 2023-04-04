@@ -9,7 +9,7 @@ from __future__ import annotations
 import sys
 import os
 import typing
-from returnn.util import better_exchook
+import better_exchook
 import returnn.util.task_system as task_system
 from returnn.util.task_system import Pickler
 from returnn.util.basic import to_bool, unicode, BytesIO
