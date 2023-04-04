@@ -19,7 +19,7 @@ import h5py
 import numpy as np
 import os
 import unittest
-from returnn.util import better_exchook
+import better_exchook
 
 
 my_dir = os.path.dirname(os.path.abspath(__file__))

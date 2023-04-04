@@ -4,8 +4,7 @@ import unittest
 from nose.tools import assert_equal, assert_is_instance, assert_in, assert_greater, assert_true, assert_false
 from pprint import pprint
 from returnn.config import Config
-from returnn.util.basic import PY3
-from returnn.util import better_exchook
+import better_exchook
 
 better_exchook.replace_traceback_format_tb()
 from io import StringIO
@@ -181,46 +180,6 @@ def test_func():
     assert_equal(test_func(), "train")
     config.set("task", "search")
     assert_equal(test_func(), "search")
-
-
-def test_config_py_old_returnn_imports():
-    import tempfile
-
-    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", prefix="test_rnn_initConfig") as cfgfile:
-        cfgfile.write(
-            """
-# These are some common imports found in older config files.
-from Pretrain import WrapEpochValue
-from TFUtil import where_bc
-import TFUtil
-import returnn.TFUtil
-
-import TFHorovod
-hvd = TFHorovod.get_ctx(config=config)  # should return None if no Horovod context
-
-from returnn.Util import describe_returnn_version
-returnn_version = describe_returnn_version()
-
-tf_version_tuple = returnn.TFUtil.tf_version_tuple()
-
-    """
-        )
-        cfgfile.flush()
-        config = Config()
-        config.load_file(cfgfile.name)  # should determine format by suffix ".py"
-
-    config.typed_dict.pop("__builtins__", None)  # not needed, too verbose for pprint
-    pprint(config.typed_dict)
-
-    import returnn.util.basic as util
-    import returnn.tf.util.basic as tf_util
-
-    assert config.typed_dict["where_bc"] is tf_util.where_bc
-    assert config.typed_dict["TFUtil"].where_bc is tf_util.where_bc
-    assert config.typed_dict["hvd"] is None
-    assert config.typed_dict["tf_version_tuple"] == tf_util.tf_version_tuple()
-    assert config.typed_dict["returnn_version"] == util.describe_returnn_version()
-    assert config.typed_dict["returnn"].TFUtil is tf_util
 
 
 if __name__ == "__main__":

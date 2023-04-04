@@ -44,7 +44,7 @@ def setup():
 
     util.init_thread_join_hack()
 
-    from returnn.util import better_exchook
+    import better_exchook
 
     if sys.excepthook != sys.__excepthook__:
         prev_sys_excepthook = sys.excepthook
@@ -62,20 +62,6 @@ def setup():
 
     # No propagate, use stdout directly.
     log.initialize(verbosity=[5], propagate=False)
-
-    # TF is optional.
-    # Note that importing TF still has a small side effect:
-    # BackendEngine._get_default_engine() will return TF by default, if TF is already loaded.
-    # For most tests, this does not matter.
-    try:
-        import tensorflow as tf
-    except ImportError:
-        tf = None
-
-    if tf:
-        import returnn.tf.util.basic as tf_util
-
-        tf_util.debug_register_better_repr()
 
     import returnn.util.debug as debug
 
@@ -117,8 +103,8 @@ def _try_hook_into_tests():
 
     # get TestProgram instance from stack...
     from unittest import TestProgram
-    from returnn.util.better_exchook import get_current_frame
-    from returnn.util.better_exchook import get_func_str_from_code_object
+    from better_exchook import get_current_frame
+    from better_exchook import get_func_str_from_code_object
 
     top_frame = get_current_frame()
     if not top_frame:

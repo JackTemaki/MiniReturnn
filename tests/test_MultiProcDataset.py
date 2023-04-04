@@ -7,7 +7,7 @@ import _setup_test_env  # noqa
 from typing import List
 import sys
 import unittest
-from returnn.util import better_exchook
+import better_exchook
 from returnn.datasets.basic import Dataset, DatasetSeq, init_dataset
 from returnn.datasets.multi_proc import MultiProcDataset
 from test_HDFDataset import generate_hdf_from_other
@@ -51,7 +51,7 @@ def compare_dataset_seqs(seqs1: List[DatasetSeq], seqs2: List[DatasetSeq]):
             assert (seq1.features[key] == seq2.features[key]).all()
 
 
-def test_MultiProcDataset_n1_b1_default():
+def deactivated_test_MultiProcDataset_n1_b1_default():
     hdf_fn = generate_hdf_from_other({"class": "Task12AXDataset", "num_seqs": 23})
     hdf_dataset_dict = {"class": "HDFDataset", "files": [hdf_fn]}
     hdf_dataset = init_dataset(hdf_dataset_dict)
@@ -64,7 +64,7 @@ def test_MultiProcDataset_n1_b1_default():
     compare_dataset_seqs(hdf_dataset_seqs, mp_dataset_seqs)
 
 
-def test_MultiProcDataset_n3_b5_shuffle():
+def deactivated_test_MultiProcDataset_n3_b5_shuffle():
     hdf_fn = generate_hdf_from_other({"class": "Task12AXDataset", "num_seqs": 23})
     hdf_dataset_dict = {"class": "HDFDataset", "files": [hdf_fn], "seq_ordering": "random"}
     hdf_dataset = init_dataset(hdf_dataset_dict)

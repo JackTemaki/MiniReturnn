@@ -8,8 +8,7 @@ from nose.tools import assert_equal
 import numpy
 import unittest
 
-from returnn.util import better_exchook
-from returnn.log import log
+import better_exchook
 
 
 def test_save_load():

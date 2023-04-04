@@ -7,7 +7,7 @@ from returnn.datasets.sprint import ExternSprintDataset
 import os
 import sys
 import unittest
-from returnn.util import better_exchook
+import better_exchook
 
 dummyconfig_dict = {
     "num_inputs": 2,

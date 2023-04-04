@@ -105,7 +105,7 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    from returnn.util import better_exchook
+    import better_exchook
 
     better_exchook.install()
     main(sys.argv)

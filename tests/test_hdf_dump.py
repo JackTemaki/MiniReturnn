@@ -15,7 +15,7 @@ from returnn.datasets.generating import DummyDataset
 from returnn.datasets.hdf import HDFDataset
 from returnn.util.basic import DictAsObj
 import unittest
-from returnn.util import better_exchook
+import better_exchook
 
 
 options = {"epoch": 1, "start_seq": 0, "end_seq": float("inf")}

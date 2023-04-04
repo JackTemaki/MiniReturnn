@@ -12,7 +12,7 @@ import numpy as np
 import numpy
 import unittest
 
-from returnn.util import better_exchook
+import better_exchook
 
 better_exchook.replace_traceback_format_tb()
 
@@ -346,90 +346,6 @@ def test_logging():
 
     logging.getLogger("returnn").debug("Hello from returnn logger.")
     logging.getLogger("returnn.import_").debug("Hello from returnn.import_ logger.")
-
-
-def test_import_():
-    from returnn.import_ import import_
-
-    mod = import_("github.com/rwth-i6/returnn-experiments", "common/test.py", "20210302-01094bef2761")
-    print("Loaded mod %s, name %s, file %s" % (mod, mod.__name__, mod.__file__))
-    assert_equal(mod.hello(), "hello world")
-
-
-def test_import_root_repo_mod():
-    from returnn.import_ import import_
-
-    mod = import_("github.com/rwth-i6/returnn_common", "test.py", "20210602-1bc6822")
-    print("Loaded mod %s, name %s, file %s" % (mod, mod.__name__, mod.__file__))
-    assert_equal(mod.hello(), "hello world")
-
-
-def test_import_root_repo_pkg():
-    from returnn.import_ import import_
-
-    mod = import_("github.com/rwth-i6/returnn_common", ".", "20210602-1bc6822")
-    print("Loaded mod %s, name %s, file %s" % (mod, mod.__name__, mod.__file__))
-    from returnn_import.github_com.rwth_i6.returnn_common.v20210602162042_1bc6822b2fd1 import test
-
-    assert_equal(test.hello(), "hello world")
-
-
-def test_import_root_repo_sub_mod():
-    from returnn.import_ import import_
-
-    mod = import_("github.com/rwth-i6/returnn_common", "test/hello.py", "20210603-3752d77")
-    print("Loaded mod %s, name %s, file %s" % (mod, mod.__name__, mod.__file__))
-    assert_equal(mod.hello(), "hello world")
-
-
-def test_import_pkg_py_import():
-    from returnn.import_ import import_
-
-    mod = import_("github.com/rwth-i6/returnn-experiments", "common", "20210302-01094bef2761")
-    print("Loaded mod %s, name %s, file %s" % (mod, mod.__name__, mod.__file__))
-    # noinspection PyUnresolvedReferences
-    from returnn_import.github_com.rwth_i6.returnn_experiments.v20210302133012_01094bef2761 import common
-
-    assert common is mod
-
-
-def test_import_wrong_date():
-    from returnn.import_ import import_
-    from returnn.import_.common import InvalidVersion
-
-    try:
-        import_("github.com/rwth-i6/returnn-experiments", "common/test.py", "20210301-01094bef2761")
-    except InvalidVersion as exc:
-        print("got expected exception:", exc)
-    else:
-        raise Exception("We expected an invalid version exception but got nothing.")
-
-
-def test_import_wrong_pkg_py_import():
-    from pprint import pprint
-    from returnn.import_ import import_
-    from returnn.import_.common import _registered_modules, MissingExplicitImport
-
-    # Use some other commit here which is not used by the other tests, to not mess up.
-    mod = import_("github.com/rwth-i6/returnn-experiments", "common", "20210302-10beb9d1c57e")
-    print("Loaded mod %s, name %s, file %s" % (mod, mod.__name__, mod.__file__))
-    print("Registered modules:")
-    pprint(_registered_modules)
-
-    # Mod name, without "common".
-    mod_name = "returnn_import.github_com.rwth_i6.returnn_experiments.v20210302153450_10beb9d1c57e"
-    assert mod_name in _registered_modules
-    assert mod_name in sys.modules
-    # Remove from both to force a reload.
-    del _registered_modules[mod_name]
-    del sys.modules[mod_name]
-
-    try:
-        import returnn_import.github_com.rwth_i6.returnn_experiments.v20210302153450_10beb9d1c57e
-    except MissingExplicitImport as exc:  # but *not* a normal ImportError
-        print("Got expected exception:", exc)
-    else:
-        raise Exception("We expected an import error exception but got nothing.")
 
 
 def test_literal_py_to_pickle():

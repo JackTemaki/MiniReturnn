@@ -11,7 +11,7 @@ from returnn.datasets.basic import Dataset
 from returnn.datasets.generating import Task12AXDataset
 from returnn.torch.data import pipeline as data_pipeline
 from returnn.torch.data import returnn_dataset_wrapper
-from returnn.util import better_exchook
+import better_exchook
 
 
 def get_loader_from_returnn_dataset(dataset: Dataset, mp_manager: torch.multiprocessing.Manager) -> DataLoader2:

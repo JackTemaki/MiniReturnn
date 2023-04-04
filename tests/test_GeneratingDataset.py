@@ -3,16 +3,13 @@
 from __future__ import annotations
 
 import _setup_test_env  # noqa
-import unittest
 from nose.tools import assert_equal, assert_is_instance, assert_in, assert_not_in, assert_true, assert_false
 from returnn.datasets.generating import *
-from returnn.datasets.basic import DatasetSeq
 from returnn.util.basic import PY3, unicode
 import os
 import unittest
 
-from returnn.util import better_exchook
-from returnn.log import log
+import better_exchook
 
 
 my_dir = os.path.dirname(os.path.realpath(__file__))

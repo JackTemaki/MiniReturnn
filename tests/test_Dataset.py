@@ -12,7 +12,7 @@ from returnn.engine.batch import Batch
 from returnn.datasets.basic import Dataset
 from returnn.util.basic import NumbersDict
 
-from returnn.util import better_exchook
+import better_exchook
 
 
 def test_Task12AXDataset_deepcopy():

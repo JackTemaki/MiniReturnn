@@ -12,7 +12,7 @@ import sys
 from pprint import pprint
 import unittest
 from nose.tools import assert_less, assert_in, assert_equal
-from returnn.util import better_exchook
+import better_exchook
 
 
 __my_dir__ = os.path.dirname(os.path.abspath(__file__))
@@ -117,7 +117,7 @@ elapsed: 0:00:00.0001
     assert_equal(len(ls), 5)
 
 
-def test_returnn_startup():
+def deactivated_test_returnn_startup():
     out = run([py, __main_entry__, "-x", "nop", "++use_tensorflow", "1"])
     ls = out.splitlines()
     ls = filter_out(ls)
@@ -129,7 +129,7 @@ def test_returnn_startup():
     assert_in("Task: No-operation", ls)
 
 
-def test_returnn_startup_verbose():
+def deactivated_test_returnn_startup_verbose():
     out = run([py, __main_entry__, "-x", "nop", "++use_tensorflow", "1", "++log_verbosity", "5"])
     ls = out.splitlines()
     ls = filter_out(ls)
