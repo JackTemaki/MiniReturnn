@@ -128,37 +128,9 @@ def init_log():
     log.init_by_config(config)
 
 
-def get_cache_byte_sizes():
-    """
-    :rtype: (int,int,int)
-    :returns cache size in bytes for (train,dev,eval)
-    """
-    cache_sizes_user = config.list("cache_size", ["%iG" % util.default_cache_size_in_gbytes()])
-    num_datasets = 1 + config.has("dev") + config.has("eval")
-    cache_factor = 1.0
-    if len(cache_sizes_user) == 1:
-        cache_sizes_user *= 3
-        cache_factor /= float(num_datasets)
-    elif len(cache_sizes_user) == 2:
-        cache_sizes_user.append("0")
-    assert len(cache_sizes_user) == 3, "invalid amount of cache sizes specified"
-    cache_sizes = []
-    for cache_size_user in cache_sizes_user:
-        cache_size = cache_factor * float(cache_size_user.replace("G", "").replace("M", "").replace("K", ""))
-        assert len(cache_size_user) - len(str(cache_size)) <= 1, "invalid cache size specified"
-        if cache_size_user.find("G") > 0:
-            cache_size *= 1024 * 1024 * 1024
-        elif cache_size_user.find("M") > 0:
-            cache_size *= 1024 * 1024
-        elif cache_size_user.find("K") > 0:
-            cache_size *= 1024
-        cache_size = int(cache_size) + 1 if int(cache_size) > 0 else 0
-        cache_sizes.append(cache_size)
-    return cache_sizes
-
 
 # noinspection PyShadowingNames
-def load_data(config, cache_byte_size, files_config_key, **kwargs):
+def load_data(config, files_config_key, **kwargs):
     """
     :param Config config:
     :param int cache_byte_size:
@@ -175,16 +147,13 @@ def load_data(config, cache_byte_size, files_config_key, **kwargs):
         config_opts = config.typed_value(files_config_key)
         assert isinstance(config_opts, dict)
         kwargs.update(config_opts)
-        if "cache_byte_size" not in config_opts:
-            if kwargs.get("class", None) == "HDFDataset":
-                kwargs["cache_byte_size"] = cache_byte_size
         Dataset.kwargs_update_from_config(config, kwargs)
         data = init_dataset(kwargs)
     elif config.is_typed(files_config_key) and callable(config.typed_value(files_config_key)):
         data = init_dataset(config.typed_value(files_config_key), default_kwargs=kwargs)
     else:
         config_str = config.value(files_config_key, "")
-        data = init_dataset_via_str(config_str, config=config, cache_byte_size=cache_byte_size, **kwargs)
+        data = init_dataset_via_str(config_str, config=config, **kwargs)
     cache_leftover = 0
     if isinstance(data, HDFDataset):
         cache_leftover = data.definite_cache_leftover
@@ -195,19 +164,14 @@ def init_data():
     """
     Initializes the globals train,dev,eval of type Dataset.
     """
-    cache_byte_sizes = get_cache_byte_sizes()
     global train_data, dev_data, eval_data
     dev_data, extra_cache_bytes_dev = load_data(
-        config, cache_byte_sizes[1], "dev", **Dataset.get_default_kwargs_eval(config=config)
+        config, "dev", **Dataset.get_default_kwargs_eval(config=config)
     )
     eval_data, extra_cache_bytes_eval = load_data(
-        config, cache_byte_sizes[2], "eval", **Dataset.get_default_kwargs_eval(config=config)
+        config, "eval", **Dataset.get_default_kwargs_eval(config=config)
     )
-    train_cache_bytes = cache_byte_sizes[0]
-    if train_cache_bytes >= 0:
-        # Maybe we have left over cache from dev/eval if dev/eval have cached everything.
-        train_cache_bytes += extra_cache_bytes_dev + extra_cache_bytes_eval
-    train_data, extra_train = load_data(config, train_cache_bytes, "train")
+    train_data, extra_train = load_data(config, "train")
 
 
 def print_task_properties():

@@ -1384,7 +1384,7 @@ def init_dataset(kwargs, extra_kwargs=None, default_kwargs=None):
     return obj
 
 
-def init_dataset_via_str(config_str, config=None, cache_byte_size=None, **kwargs):
+def init_dataset_via_str(config_str, config=None, **kwargs):
     """
     :param str config_str: hdf-files, or "LmDataset:..." or so
     :param returnn.config.Config|None config: optional, only for "sprint:..."
@@ -1417,8 +1417,6 @@ def init_dataset_via_str(config_str, config=None, cache_byte_size=None, **kwargs
         class_name = config_str[: config_str.find(":")]
         cls = get_dataset_class(class_name)
     else:
-        if cache_byte_size is not None:
-            kwargs["cache_byte_size"] = cache_byte_size
         cls = HDFDataset
     if config:
         data = cls.from_config(config, **kwargs)
