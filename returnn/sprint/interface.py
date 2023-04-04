@@ -22,7 +22,7 @@ from returnn.datasets.sprint import SprintDatasetBase
 from returnn.engine.base import EngineBase
 from returnn.log import log
 import returnn.util.debug as debug
-from returnn.util.basic import interrupt_main, to_bool, BackendEngine
+from returnn.util.basic import interrupt_main, to_bool
 import returnn.util.task_system as task_system
 import returnn.__main__ as rnn
 
@@ -725,10 +725,6 @@ def _init_base(configfile=None, target_mode=None, epoch=None, sprint_opts=None):
         rnn.init_backend_engine()
         rnn.init_faulthandler(sigusr1_chain=True)
 
-        if BackendEngine.is_tensorflow_selected():
-            # Use TFEngine.Engine class instead of Engine.Engine.
-            from returnn.tf.engine import Engine
-
         import atexit
 
         atexit.register(_at_exit_handler)
@@ -740,10 +736,8 @@ def _init_base(configfile=None, target_mode=None, epoch=None, sprint_opts=None):
 
     if target_mode and target_mode == "forward" and epoch:
         model_filename = config.value("model", "")
-        fns = [EngineBase.epoch_model_filename(model_filename, epoch, is_pretrain) for is_pretrain in [False, True]]
+        fns = [EngineBase.epoch_model_filename(model_filename, epoch) for is_pretrain in [False, True]]
         fn_postfix = ""
-        if BackendEngine.is_tensorflow_selected():
-            fn_postfix += ".meta"
         fns_existing = [fn for fn in fns if os.path.exists(fn + fn_postfix)]
         assert len(fns_existing) == 1, "%s not found" % fns
         model_epoch_filename = fns_existing[0]
@@ -936,7 +930,7 @@ def _forward(segment_name, features):
     assert features.shape == (InputDim, num_time)
     dataset, seq_idx = features_to_dataset(features=features, segment_name=segment_name)
 
-    if BackendEngine.is_tensorflow_selected():
+    if False:
         posteriors = engine.forward_single(dataset=dataset, seq_idx=seq_idx)
     else:
         raise NotImplementedError("unknown backend engine")

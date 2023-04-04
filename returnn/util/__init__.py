@@ -5,4 +5,4 @@ Also independent from TensorFlow or Theano (see :mod:`returnn.tf.util` or :mod:`
 """
 
 # Some basic imports.
-from .basic import BackendEngine, NumbersDict, BehaviorVersion
+from .basic import NumbersDict

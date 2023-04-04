@@ -13,7 +13,7 @@ from .basic import DatasetSeq
 from .cached2 import CachedDataset2
 import gzip
 import xml.etree.ElementTree as ElementTree
-from returnn.util.basic import parse_orthography, parse_orthography_into_symbols, load_json, BackendEngine, unicode
+from returnn.util.basic import parse_orthography, parse_orthography_into_symbols, load_json, unicode
 from returnn.util.literal_py_to_pickle import literal_eval
 from returnn.log import log
 import numpy
@@ -2164,75 +2164,3 @@ def get_post_processor_function(opts):
         return text
 
     return chained_post_processors
-
-
-def _main():
-    from returnn.util import better_exchook
-
-    better_exchook.install()
-    from argparse import ArgumentParser
-
-    arg_parser = ArgumentParser()
-    arg_parser.add_argument(
-        "lm_dataset", help="Python eval string, should eval to dict" + ", or otherwise filename, and will just dump"
-    )
-    arg_parser.add_argument("--post_processor", nargs="*")
-    args = arg_parser.parse_args()
-    if not args.lm_dataset.startswith("{"):
-        callback = print
-        if args.post_processor:
-            pp = get_post_processor_function(args.post_processor)
-
-            def callback(text):
-                """
-                :param str text:
-                """
-                print(pp(text))
-
-        if os.path.isfile(args.lm_dataset):
-            iter_corpus(args.lm_dataset, callback)
-        else:
-            callback(args.lm_dataset)
-        sys.exit(0)
-
-    log.initialize(verbosity=[5])
-    print("LmDataset demo startup")
-    kwargs = eval(args.lm_dataset)
-    assert isinstance(kwargs, dict), "arg should be str of dict: %s" % args.lm_dataset
-    print("Creating LmDataset with kwargs=%r ..." % kwargs)
-    dataset = LmDataset(**kwargs)
-    print("init_seq_order ...")
-    dataset.init_seq_order(epoch=1)
-
-    seq_idx = 0
-    last_log_time = time.time()
-    print("start iterating through seqs ...")
-    while dataset.is_less_than_num_seqs(seq_idx):
-        if seq_idx == 0:
-            print("load_seqs with seq_idx=%i ...." % seq_idx)
-        dataset.load_seqs(seq_idx, seq_idx + 1)
-
-        if time.time() - last_log_time > 2.0:
-            last_log_time = time.time()
-            # noinspection PyProtectedMember
-            print(
-                "Loading %s progress, %i/%i (%.0f%%) seqs loaded (%.0f%% skipped), (%.0f%% unknown) total syms %i ..."
-                % (
-                    dataset.__class__.__name__,
-                    dataset.next_orth_idx,
-                    dataset.estimated_num_seqs,
-                    100.0 * dataset.next_orth_idx / dataset.estimated_num_seqs,
-                    100.0 * dataset.num_skipped / (dataset.next_orth_idx or 1),
-                    100.0 * dataset.num_unknown / dataset._num_timesteps_accumulated["data"],
-                    dataset._num_timesteps_accumulated["data"],
-                )
-            )
-
-        seq_idx += 1
-
-    print("finished iterating, num seqs: %i" % seq_idx)
-    print("dataset len:", dataset.len_info())
-
-
-if __name__ == "__main__":
-    _main()

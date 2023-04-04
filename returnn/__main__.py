@@ -31,7 +31,6 @@ from returnn.datasets import Dataset, init_dataset, init_dataset_via_str
 from returnn.datasets.hdf import HDFDataset
 from returnn.util import debug as debug_util
 from returnn.util import basic as util
-from returnn.util.basic import BackendEngine, BehaviorVersion
 
 # These imports are not directly used here, but make them available, as other code imports them from here.
 # noinspection PyUnresolvedReferences
@@ -120,8 +119,6 @@ def init_config(config_filename=None, command_line_options=(), default_config=No
     if config.value("task", "train") == "server":
         config.set("num_inputs", 2)
         config.set("num_outputs", 1)
-
-    BehaviorVersion.set(config.int("behavior_version", None))
 
 
 def init_log():
@@ -235,16 +232,7 @@ def init_engine():
     Initializes global ``engine``, for example :class:`returnn.tf.engine.Engine`.
     """
     global engine
-    if BackendEngine.is_tensorflow_selected():
-        from returnn.tf.engine import Engine
-
-        engine = Engine(config=config)
-    elif BackendEngine.is_torch_selected():
-        from returnn.torch.engine import Engine
-
-        engine = Engine(config=config)
-    else:
-        raise NotImplementedError("Backend engine not implemented")
+    engine = Engine(config=config)
 
 
 def returnn_greeting(config_filename=None, command_line_options=None):
@@ -276,69 +264,6 @@ def returnn_greeting(config_filename=None, command_line_options=None):
     print("Hostname:", socket.gethostname(), file=log.v4)
 
 
-def init_backend_engine():
-    """
-    Selects the backend engine (TensorFlow, PyTorch, Theano, or whatever)
-    and does corresponding initialization and preparation.
-
-    This does not initialize the global ``engine`` object yet.
-    See :func:`init_engine` for that.
-    """
-    BackendEngine.select_engine(config=config)
-    if BackendEngine.is_tensorflow_selected():
-        print("TensorFlow:", util.describe_tensorflow_version(), file=log.v3)
-        if util.get_tensorflow_version_tuple()[0] == 0:
-            print("Warning: TF <1.0 is not supported and likely broken.", file=log.v2)
-        if os.environ.get("TF_DEVICE"):
-            print(
-                "Devices: Use %s via TF_DEVICE instead of %s."
-                % (os.environ.get("TF_DEVICE"), config.opt_typed_value("device")),
-                file=log.v4,
-            )
-            config.set("device", os.environ.get("TF_DEVICE"))
-        if config.is_true("use_horovod"):
-            import returnn.tf.horovod
-
-            hvd = returnn.tf.horovod.get_ctx(config=config)
-            import socket
-
-            if "gpu" in config.value("device", "") or os.environ.get("CUDA_VISIBLE_DEVICES", ""):
-                # We assume that we want to use a GPU.
-                gpu_opts = config.typed_dict.setdefault("tf_session_opts", {}).setdefault("gpu_options", {})
-                assert "visible_device_list" not in gpu_opts
-                gpu_opts["visible_device_list"] = str(hvd.local_rank())
-                print(
-                    "Horovod: Hostname %s, pid %i, using GPU %s."
-                    % (socket.gethostname(), os.getpid(), gpu_opts["visible_device_list"]),
-                    file=log.v3,
-                )
-            else:
-                if hvd.rank() == 0:  # Don't spam in all ranks.
-                    print("Horovod: Not using GPU.", file=log.v3)
-            if hvd.rank() == 0:  # Don't spam in all ranks.
-                print("Horovod: Reduce type:", hvd.get_reduce_type(), file=log.v3)
-        from returnn.tf.util import basic as tf_util
-
-        tf_session_opts = config.typed_value("tf_session_opts", {})
-        assert isinstance(tf_session_opts, dict)
-        # This must be done after the Horovod logic, such that we only touch the devices we are supposed to touch.
-        tf_util.setup_tf_thread_pools(log_file=log.v3, tf_session_opts=tf_session_opts)
-        # Print available devices. Also make sure that get_tf_list_local_devices uses the correct TF session opts.
-        tf_util.print_available_devices(tf_session_opts=tf_session_opts, file=log.v2)
-        from returnn.tf.native_op import OpMaker
-
-        OpMaker.log_stream = log.v3
-        tf_util.debug_register_better_repr()
-        if config.is_true("distributed_tf"):
-            import returnn.tf.distributed
-
-            returnn.tf.distributed.init_distributed_tf(config)
-    elif BackendEngine.is_torch_selected():
-        print("PyTorch:", util.describe_torch_version(), file=log.v3)
-    else:
-        raise NotImplementedError
-
-
 def init(config_filename=None, command_line_options=(), config_updates=None, extra_greeting=None):
     """
     :param str|None config_filename:
@@ -360,7 +285,7 @@ def init(config_filename=None, command_line_options=(), config_updates=None, ext
         print(extra_greeting, file=log.v1)
     returnn_greeting(config_filename=config_filename, command_line_options=command_line_options)
     debug_util.init_faulthandler()
-    init_backend_engine()
+    init_engine()
     if config.bool("ipython", False):
         debug_util.init_ipython_kernel()
     if need_data():
@@ -379,13 +304,6 @@ def finalize(error_occurred=False):
     global quit_returnn
     quit_returnn = True
     sys.exited = True
-    if engine:
-        if BackendEngine.is_tensorflow_selected():
-            engine.finalize(error_occurred=error_occurred)
-            if config.is_true("use_horovod"):
-                import horovod.tensorflow as hvd  # noqa
-
-                hvd.shutdown()
 
 
 def need_data():
@@ -487,11 +405,6 @@ def execute_main_task():
         engine.analyze(data=eval_data or dev_data, statistics=statistics)
     elif task == "analyze_data":  # anything just based on the data
         analyze_data(config)
-    elif task == "hyper_param_tuning":
-        import returnn.tf.hyper_param_tuning
-
-        tuner = returnn.tf.hyper_param_tuning.Optimization(config=config, train_data=train_data)
-        tuner.work()
     elif task == "cleanup_old_models":
         engine.cleanup_old_models(ask_for_confirmation=True)
     elif task == "search_server":
