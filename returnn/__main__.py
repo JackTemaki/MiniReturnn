@@ -115,10 +115,6 @@ def init_config(config_filename=None, command_line_options=(), default_config=No
         import returnn.util.task_system
 
         returnn.util.task_system.SharedMemNumpyConfig["enabled"] = True
-    # Server default options
-    if config.value("task", "train") == "server":
-        config.set("num_inputs", 2)
-        config.set("num_outputs", 1)
 
 
 def init_log():
@@ -196,6 +192,7 @@ def init_engine():
     Initializes global ``engine``, for example :class:`returnn.tf.engine.Engine`.
     """
     global engine
+    from .torch.engine import Engine
     engine = Engine(config=config)
 
 
@@ -326,7 +323,7 @@ def execute_main_task():
             output_per_seq_file_format=config.value("output_per_seq_file_format", "txt"),
             lr_control_update_scores=lr_control_update_scores,
         )
-    elif task in ["forward", "hpx"]:
+    elif task in ["forward"]:
         assert eval_data is not None, "no eval data provided"
         combine_labels = config.value("combine_labels", "")
         engine.use_search_flag = config.bool("forward_use_search", False)
@@ -363,18 +360,8 @@ def execute_main_task():
         assert train_data is not None, "train data for priors should be provided"
         engine.init_network_from_config(config)
         engine.compute_priors(dataset=train_data, config=config)
-    elif task == "analyze":  # anything based on the network + Device
-        statistics = config.list("statistics", None)
-        engine.init_network_from_config(config)
-        engine.analyze(data=eval_data or dev_data, statistics=statistics)
-    elif task == "analyze_data":  # anything just based on the data
-        analyze_data(config)
     elif task == "cleanup_old_models":
         engine.cleanup_old_models(ask_for_confirmation=True)
-    elif task == "search_server":
-        engine.use_search_flag = True
-        engine.init_network_from_config(config)
-        engine.web_server(port=config.int("web_server_port", 12380))
     elif task.startswith("config:"):
         action = config.typed_dict[task[len("config:") :]]
         print("Task: %r" % action, file=log.v1)
@@ -390,9 +377,6 @@ def execute_main_task():
             action()
     elif task == "nop":
         print("Task: No-operation", file=log.v1)
-    elif task == "nop_init_net_train":
-        print("Task: No-operation, despite initializing the network (for training)", file=log.v1)
-        engine.init_train_from_config(config, train_data, dev_data, eval_data)
     elif task == "initialize_model":
         engine.init_train_from_config(config, train_data, dev_data, eval_data)
         engine.save_model(config.value("model", "dummy"))
@@ -400,61 +384,6 @@ def execute_main_task():
         raise Exception("unknown task: %r" % (task,))
 
     print(("elapsed: %s" % hms_fraction(time.time() - start_time)), file=log.v3)
-
-
-# noinspection PyShadowingNames
-def analyze_data(config):  # pylint: disable=redefined-outer-name
-    """
-    :param Config config:
-    """
-    dss = config.value("analyze_dataset", "train")
-    ds = {"train": train_data, "dev": dev_data, "eval": eval_data}[dss]
-    epoch = config.int("epoch", 1)
-    print("Analyze dataset", dss, "epoch", epoch, file=log.v1)
-    ds.init_seq_order(epoch=epoch)
-    stat_prefix = config.value("statistics_save_prefix", "statistics")
-    dtype = config.value("statistics_dtype", "float64")
-    target = config.value("target", "classes")
-    data_key = config.value("data_key", "data")
-    assert ds.is_data_sparse(target), "need for prior calculation"
-    assert not ds.is_data_sparse(data_key), "needed for mean/var estimation"
-    from returnn.util.basic import inplace_increment, progress_bar_with_time, NumbersDict
-
-    priors = numpy.zeros((ds.get_data_dim(target),), dtype=dtype)
-    mean = numpy.zeros((ds.get_data_dim(data_key),), dtype=dtype)
-    mean_sq = numpy.zeros((ds.get_data_dim(data_key),), dtype=dtype)
-    total_targets_len = 0
-    total_data_len = 0
-
-    # Note: This is not stable! See :class:`Util.Stats` for a better alternative.
-    seq_idx = 0
-    while ds.is_less_than_num_seqs(seq_idx):
-        progress_bar_with_time(ds.get_complete_frac(seq_idx))
-        ds.load_seqs(seq_idx, seq_idx + 1)
-        targets = ds.get_data(seq_idx, target)
-        inplace_increment(priors, targets, 1)
-        total_targets_len += targets.shape[0]
-        data = ds.get_data(seq_idx, data_key)
-        new_total_data_len = total_data_len + data.shape[0]
-        f = float(total_data_len) / new_total_data_len
-        mean = mean * f + numpy.sum(data, axis=0) * (1.0 - f)
-        mean_sq = mean_sq * f + numpy.sum(data * data, axis=0) * (1.0 - f)
-        total_data_len = new_total_data_len
-        seq_idx += 1
-    log_priors = numpy.log(priors)
-    log_priors -= numpy.log(NumbersDict(ds.get_num_timesteps())[target])
-    std_dev = numpy.sqrt(mean_sq - mean * mean)
-    print("Finished. %i total target frames, %i total data frames" % (total_targets_len, total_data_len), file=log.v1)
-    priors_fn = stat_prefix + ".log_priors.txt"
-    mean_fn = stat_prefix + ".mean.txt"
-    std_dev_fn = stat_prefix + ".std_dev.txt"
-    print("Dump priors to", priors_fn, file=log.v1)
-    numpy.savetxt(priors_fn, log_priors)
-    print("Dump mean to", mean_fn, file=log.v1)
-    numpy.savetxt(mean_fn, mean)
-    print("Dump std dev to", std_dev_fn, file=log.v1)
-    numpy.savetxt(std_dev_fn, std_dev)
-    print("Done.", file=log.v1)
 
 
 def main(argv=None):
