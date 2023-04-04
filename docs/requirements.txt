@@ -1,9 +1,7 @@
 numpy
 scipy
 h5py
-theano==0.9
-nose
-tensorflow==2.11.1
+torch==2.0
 numpydoc
 better_exchook
 sphinx_rtd_theme
