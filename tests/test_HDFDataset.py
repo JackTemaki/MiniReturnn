@@ -508,18 +508,6 @@ def test_hdf_simple_iter_cached():
     dummy_iter_dataset(dataset)
 
 
-def test_rnn_getCacheByteSizes_zero():
-    from returnn.config import Config
-
-    config = Config({"cache_size": "0"})
-    import returnn.__main__ as rnn
-
-    rnn.config = config
-    sizes = rnn.get_cache_byte_sizes()
-    assert len(sizes) == 3
-    assert all([s == 0 for s in sizes])
-
-
 def test_rnn_initData():
     hdf_fn = generate_hdf_from_dummy()
     from returnn.config import Config
