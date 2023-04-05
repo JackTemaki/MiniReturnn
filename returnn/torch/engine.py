@@ -281,7 +281,7 @@ class Engine(EngineBase):
         if epoch > 1:
             filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".pt"
             print("Load model %s" % (filename,), file=log.v4)
-            model_state = torch.load(filename)
+            model_state = torch.load(filename, map_location=torch.device(self._device))
             self._model.load_state_dict(model_state)
         preload_from_files = self.config.typed_value("preload_from_files", {})
         if preload_from_files:
@@ -359,7 +359,7 @@ class Engine(EngineBase):
         :param int epoch: Epoch from which to load the optimizer state.
         """
         filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".opt.pt"
-        self._updater.load_optimizer(filename)
+        self._updater.load_optimizer(filename, device=self._device)
 
     def _save_optimizer(self):
         """

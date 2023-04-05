@@ -112,14 +112,15 @@ class Updater(object):
             raise ValueError("config field 'optimizer' needs to be set explicitely for the Torch backend")
         self.optimizer = self._create_optimizer(optimizer_opts)
 
-    def load_optimizer(self, filename):
+    def load_optimizer(self, filename: str, device: str):
         """
         Loads a torch.optim.Optimizer from disk and stores it in self.optimizer.
 
-        :param str filename: File from which to load the optimizer state.
+        :param filename: File from which to load the optimizer state.
+        :param device: target device to load the optimizer to
         """
         print("Load optimizer %s" % filename, file=log.v4)
-        optimizer_state = torch.load(filename)
+        optimizer_state = torch.load(filename, map_location=torch.device(device))
         self.optimizer.load_state_dict(optimizer_state)
 
     def save_optimizer(self, filename):
