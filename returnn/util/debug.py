@@ -53,7 +53,7 @@ def dump_all_thread_tracebacks(exclude_thread_ids=None, exclude_self=False):
     """
     if exclude_thread_ids is None:
         exclude_thread_ids = set()
-    from returnn.util.better_exchook import print_tb
+    from better_exchook import print_tb
     import threading
 
     if exclude_self:
@@ -99,7 +99,7 @@ def setup_warn_with_traceback():
     Installs some hook for ``warnings.showwarning``.
     """
     import warnings
-    from returnn.util.better_exchook import print_tb
+    from better_exchook import print_tb
 
     def warn_with_traceback(message, category, filename, lineno, file=None, line=None):
         """
@@ -123,7 +123,7 @@ def init_better_exchook():
     Installs our own ``sys.excepthook``, which uses :mod:`better_exchook`,
     but adds some special handling for the main thread.
     """
-    from returnn.util.better_exchook import better_exchook
+    from better_exchook import better_exchook
 
     def excepthook(exc_type, exc_obj, exc_tb):
         """
@@ -453,7 +453,7 @@ def debug_shell(user_ns=None, user_global_ns=None, exit_afterwards=True):
         print("Locals:")
         for k, v in sorted(user_ns.items()):
             print("  %s (%s)" % (k, type(v)))
-    from returnn.util.better_exchook import debug_shell
+    from better_exchook import debug_shell
 
     debug_shell(user_ns, user_global_ns_new)
     if exit_afterwards:
