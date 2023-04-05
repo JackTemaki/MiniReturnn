@@ -130,7 +130,7 @@ class Engine(EngineBase):
         print("start", self.get_epoch_str(), "with learning rate", self.learning_rate, "...", file=log.v4)
 
         self._model.train()
-        init_train_step_run_ctx()
+        init_train_step_run_ctx(device=self._device)
 
         accumulated_losses_dict = NumbersDict()
         step_idx = 0
@@ -173,7 +173,7 @@ class Engine(EngineBase):
         Runs model on all eval datasets and calculates the loss.
         """
         self._model.eval()
-        init_train_step_run_ctx()
+        init_train_step_run_ctx(device=self._device)
 
         for dataset_name, dataset in self.eval_datasets.items():
             print(f"Evaluating dataset {dataset_name!r}'", file=log.v3)

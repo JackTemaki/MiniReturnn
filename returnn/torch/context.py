@@ -25,20 +25,20 @@ def reset_run_ctx():
     _run_ctx = None
 
 
-def init_train_step_run_ctx():
+def init_train_step_run_ctx(device: str):
     """
     Call this at the beginning of a new train step.
     """
     global _run_ctx
-    _run_ctx = RunCtx(stage="train_step")
+    _run_ctx = RunCtx(stage="train_step", device=device)
 
 
-def init_forward_step_run_ctx():
+def init_forward_step_run_ctx(device: str):
     """
     Call this at the beginning of a new forward step.
     """
     global _run_ctx
-    _run_ctx = RunCtx(stage="forward_step")
+    _run_ctx = RunCtx(stage="forward_step", device=device)
 
 
 def get_run_ctx() -> RunCtx:
@@ -63,13 +63,15 @@ class RunCtx:
     In forwarding, we expect that some output is being defined via mark_as_output().
     """
 
-    def __init__(self, *, stage: str):
+    def __init__(self, *, device: str, stage: str):
         """
+        :param device:
         :param stage:
             - "init"
             - "train_step", also for eval, for mark_as_loss and get_total_loss
             - "forward_step", for mark_as_output
         """
+        self.device = device
         self.stage = stage
         self.losses = {}  # type: Dict[str, Loss]
 
