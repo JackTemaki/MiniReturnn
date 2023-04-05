@@ -49,7 +49,7 @@ class Engine(EngineBase):
         self._save_model_epoch_interval = 1
         self._updater = None  # type: Optional[Updater]
 
-        self._device = "cuda" if torch.cuda.is_available() else "cpu"
+        self._device = "cuda" if torch.cuda.is_available() and torch.cuda.device_count() > 0 else "cpu"
         print(f"Using device {self._device}", file=log.v3)
 
     def init_train_from_config(
