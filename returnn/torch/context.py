@@ -1,0 +1,126 @@
+"""
+Run context
+
+We can either be in param-init stage,
+or in the main training loop,
+or forwarding loop.
+"""
+
+from __future__ import annotations
+from typing import Optional, Union, Dict
+from dataclasses import dataclass
+from torch import Tensor
+
+
+__all__ = ["RunCtx", "Loss", "get_run_ctx", "init_train_step_run_ctx", "init_forward_step_run_ctx"]
+
+
+_run_ctx = None  # type: Optional[RunCtx]
+
+def reset_run_ctx():
+    """
+    If we get out of a train step or forward step.
+    """
+    global _run_ctx
+    _run_ctx = None
+
+
+def init_train_step_run_ctx():
+    """
+    Call this at the beginning of a new train step.
+    """
+    global _run_ctx
+    _run_ctx = RunCtx(stage="train_step")
+
+
+def init_forward_step_run_ctx():
+    """
+    Call this at the beginning of a new forward step.
+    """
+    global _run_ctx
+    _run_ctx = RunCtx(stage="forward_step")
+
+
+def get_run_ctx() -> RunCtx:
+    """
+    :return: current run context, see :class:`RunCtx`
+    """
+    global _run_ctx, _init_run_ctx
+    if _run_ctx is None:
+        if _init_run_ctx is None:
+            _init_run_ctx = RunCtx(stage="init")
+        return _init_run_ctx
+    return _run_ctx
+
+
+class RunCtx:
+    """
+    We can either be in param-init stage,
+    or in the main training (or eval) loop,
+    or forwarding loop (doing recog, beam search, dumping whatever, ...).
+
+    In training/eval, we expect that some loss is being defined via mark_as_loss().
+    In forwarding, we expect that some output is being defined via mark_as_output().
+    """
+
+    def __init__(self, *, stage: str):
+        """
+        :param stage:
+            - "init"
+            - "train_step", also for eval, for mark_as_loss and get_total_loss
+            - "forward_step", for mark_as_output
+        """
+        self.stage = stage
+        self.losses = {}  # type: Dict[str, Loss]
+
+    def mark_as_loss(
+        self,
+        loss: Tensor,
+        name: str,
+        *,
+        scale: float = 1.0,
+    ) -> None:
+        """
+        Mark the given loss tensor as a loss.
+
+        :param loss: scalar loss
+        :param name: name of the loss. this name is used for reporting by RETURNN, and also for LR scheduling.
+        :param scale: scale the loss by this factor for the training optimizer
+        """
+        assert self.stage == "train_step"
+        assert name not in self.losses
+        self.losses[name] = Loss(
+            loss=loss,
+            name=name,
+            scale=scale,
+        )
+
+    def total_loss(self) -> Union[Tensor, float]:
+        """
+        :return: total loss, as it is used for backpropagation
+        """
+        assert self.stage == "train_step"
+        assert self.losses, "call RunCtx.mark_as_loss(...)"
+        loss = 0.0
+        for name, loss_obj in self.losses.items():
+            if loss_obj.scale == 0.0:
+                continue
+            loss += loss_obj.loss * loss_obj.scale
+        return loss
+
+
+@dataclass
+class Loss:
+    """
+    Loss via :func:`RunCtx.mark_as_loss`.
+
+    We collect all relevant information here.
+    """
+
+    loss: Tensor
+    name: str
+
+    scale: float = 1.0
+
+
+

@@ -19,6 +19,8 @@ class EngineBase(object):
     Base class for a backend engine, such as :class:`TFEngine.Engine`.
     """
 
+    FILE_POSTFIX = None
+
     def __init__(self, config: Optional[Config] = None):
         """
         :param config:
@@ -65,18 +67,13 @@ class EngineBase(object):
         file_list = {}
         for epoch in range(1, cls.config_get_final_epoch(config) + 1):
             for is_pretrain in [False, True]:
-                fn = cls.epoch_model_filename(model_filename, epoch, is_pretrain)
+                fn = cls.epoch_model_filename(model_filename, epoch)
                 if os.path.exists(fn):
                     file_list[epoch] = fn
                     break
-                if util.BackendEngine.is_tensorflow_selected():
-                    if os.path.exists(fn + ".index"):
-                        file_list[epoch] = fn
-                        break
-                elif util.BackendEngine.is_torch_selected():
-                    if os.path.exists(fn + ".pt"):
-                        file_list[epoch] = fn
-                        break
+                if os.path.exists(fn + cls.get_file_postfix()):
+                    file_list[epoch] = fn
+                    break
         return file_list
 
     @classmethod
@@ -96,15 +93,15 @@ class EngineBase(object):
         load_model_epoch_filename = util.get_checkpoint_filepattern(config.value("load", ""))
         if load_model_epoch_filename:
             assert os.path.exists(
-                load_model_epoch_filename + util.get_model_filename_postfix()
+                load_model_epoch_filename + cls.get_file_postfix(),
             ), "load option %r, file %r does not exist" % (
                 config.value("load", ""),
-                load_model_epoch_filename + util.get_model_filename_postfix(),
+                load_model_epoch_filename + cls.get_file_postfix(),
             )
 
         import_model_train_epoch1 = util.get_checkpoint_filepattern(config.value("import_model_train_epoch1", ""))
         if import_model_train_epoch1:
-            assert os.path.exists(import_model_train_epoch1 + util.get_model_filename_postfix())
+            assert os.path.exists(import_model_train_epoch1 + cls.get_file_postfix())
 
         existing_models = cls.get_existing_models(config)
         load_epoch = config.int("load_epoch", -1)
@@ -162,35 +159,17 @@ class EngineBase(object):
         return epoch_model
 
     @classmethod
-    def get_train_start_epoch_batch(cls, config):
+    def get_train_start_epoch(cls, config: Config) -> int:
         """
-        We will always automatically determine the best start (epoch,batch) tuple
-        based on existing model files.
-        This ensures that the files are present and enforces that there are
-        no old outdated files which should be ignored.
-        Note that epochs start at idx 1 and batches at idx 0.
-        :type config: returnn.config.Config
-        :returns (epoch,batch)
-        :rtype (int,int)
+        :param config: returnn.config.Config
         """
-        start_batch_mode = config.value("start_batch", "auto")
-        if start_batch_mode == "auto":
-            start_batch_config = None
-        else:
-            start_batch_config = int(start_batch_mode)
         last_epoch, _ = cls.get_epoch_model(config)
         if last_epoch is None:
             start_epoch = 1
-            start_batch = start_batch_config or 0
-        elif start_batch_config is not None:
-            # We specified a start batch. Stay in the same epoch, use that start batch.
-            start_epoch = last_epoch
-            start_batch = start_batch_config
         else:
             # Start with next epoch.
             start_epoch = last_epoch + 1
-            start_batch = 0
-        return start_epoch, start_batch
+        return start_epoch
 
     @classmethod
     def epoch_model_filename(cls, model_filename, epoch):
@@ -221,4 +200,10 @@ class EngineBase(object):
         :rtype: str
         """
         return "epoch %s" % self.epoch
+
+    @classmethod
+    def get_file_postfix(cls):
+        if cls.FILE_POSTFIX is None:
+            raise NotImplementedError("Missing FILE_POSTFIX in Engine")
+        return cls.FILE_POSTFIX
 
