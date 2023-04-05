@@ -372,4 +372,11 @@ class Engine(EngineBase):
 
         self._updater.save_optimizer(filename)
 
+        # clean older optimizer
+        clean_epoch = self.epoch - 2
+        if clean_epoch > 0:
+            filename = self.get_epoch_model_filename(epoch=clean_epoch) + ".opt.pt"
+            if os.path.isfile(filename):
+                os.unlink(filename)
+
 
