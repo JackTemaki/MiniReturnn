@@ -73,6 +73,13 @@ class RunCtx:
         self.stage = stage
         self.losses = {}  # type: Dict[str, Loss]
 
+
+    def init_step(self):
+        """
+
+        """
+        self.losses = {}
+
     def mark_as_loss(
         self,
         loss: Tensor,

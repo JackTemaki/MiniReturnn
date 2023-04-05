@@ -134,9 +134,11 @@ class Engine(EngineBase):
         accumulated_losses_dict = NumbersDict()
         step_idx = 0
         for data in self._train_dataloader:
+            run_ctx = get_run_ctx()
+            run_ctx.init_step()
+
             self._run_step(data)
 
-            run_ctx = get_run_ctx()
             losses_dict = run_ctx.losses
             total_loss = run_ctx.total_loss()
 
@@ -183,9 +185,11 @@ class Engine(EngineBase):
 
             with torch.no_grad():
                 for data in data_loader:
+                    run_ctx = get_run_ctx()
+                    run_ctx.init_step()
 
                     self._run_step(data)
-                    run_ctx = get_run_ctx()
+
                     losses_dict = run_ctx.losses
                     total_loss = run_ctx.total_loss()
 
