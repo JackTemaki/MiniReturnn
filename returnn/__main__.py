@@ -156,7 +156,7 @@ def load_data(config, files_config_key, **kwargs):
     return data, cache_leftover
 
 
-def init_data():
+def init_data(config: Config):
     """
     Initializes the globals train,dev,eval of type Dataset.
     """
@@ -191,9 +191,16 @@ def init_engine():
     """
     Initializes global ``engine``, for example :class:`returnn.tf.engine.Engine`.
     """
-    global engine
+    global engine, config
     from .torch.engine import Engine
-    engine = Engine(config=config)
+    assert config is not None, "Engine can not be initialized without a config defined"
+    if config.is_typed("CustomEngine") and config.is_of_type("CustomEngine", typing.Callable):
+        CustomEngine = config.typed_value("CustomEngine")
+        print("Using custom engine from config", file=log.v5)
+        engine = CustomEngine(config=config)
+        assert isinstance(CustomEngine, EngineBase)
+    else:
+        engine = Engine(config=config)
 
 
 def returnn_greeting(config_filename=None, command_line_options=None):
