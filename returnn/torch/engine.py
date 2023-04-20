@@ -266,6 +266,7 @@ class Engine(EngineBase):
                 import dill
             except ImportError:
                 raise ModuleNotFoundError("Possible type error in DataLoader2 due to missing module 'dill'") from exc
+            raise
 
     def run_train_step(self, data: dict[str, torch.Tensor], run_ctx: RunCtx) -> Tuple[Tensor, Dict[str, Loss]]:
         """
