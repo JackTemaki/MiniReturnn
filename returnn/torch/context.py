@@ -17,6 +17,7 @@ __all__ = ["RunCtx", "Loss", "get_run_ctx", "init_train_step_run_ctx", "init_for
 
 _run_ctx = None  # type: Optional[RunCtx]
 
+
 def reset_run_ctx():
     """
     If we get out of a train step or forward step.
@@ -75,11 +76,8 @@ class RunCtx:
         self.stage = stage
         self.losses = {}  # type: Dict[str, Loss]
 
-
     def init_step(self):
-        """
-
-        """
+        """ """
         self.losses = {}
 
     def mark_as_loss(
@@ -130,6 +128,3 @@ class Loss:
     name: str
 
     scale: float = 1.0
-
-
-

@@ -3,11 +3,13 @@ Main engine for PyTorch
 """
 
 from __future__ import annotations
-from typing import Optional, Callable, Dict
+from typing import Optional, Callable, Dict, Tuple
 
 import os
+import time
 import torch
 import torch.utils.data.datapipes as dp
+from torch import Tensor
 from torchdata.dataloader2 import DataLoader2
 from random import random
 
@@ -19,7 +21,7 @@ from returnn.util import NumbersDict
 from .updater import Updater
 from .data import pipeline as data_pipeline
 from .data import returnn_dataset_wrapper
-from .context import get_run_ctx, init_train_step_run_ctx, init_forward_step_run_ctx
+from .context import get_run_ctx, init_train_step_run_ctx, init_forward_step_run_ctx, RunCtx
 
 
 class Engine(EngineBase):
@@ -128,6 +130,7 @@ class Engine(EngineBase):
         train one (sub)epoch
         """
         print("start", self.get_epoch_str(), "with learning rate", self.learning_rate, "...", file=log.v4)
+        epoch_start_time = time.time()
 
         self._model.train()
         init_train_step_run_ctx(device=self._device)
@@ -135,28 +138,25 @@ class Engine(EngineBase):
         accumulated_losses_dict = NumbersDict()
         step_idx = 0
         for data in self._train_dataloader:
+            step_time_start = time.time()
+
             run_ctx = get_run_ctx()
             run_ctx.init_step()
 
-            self._run_step(data)
-
-            losses_dict = run_ctx.losses
-            total_loss = run_ctx.total_loss()
-
-            self._updater.get_optimizer().zero_grad()
-            total_loss.backward()
-            self._updater.get_optimizer().step()
+            total_loss, losses_dict = self.run_train_step(data, run_ctx)
 
             losses_dict = {
-                "train_loss_" + name: float(loss.loss.detach().cpu().numpy())
-                for name, loss in losses_dict.items()
+                "train_loss_" + name: float(loss.loss.detach().cpu().numpy()) for name, loss in losses_dict.items()
             }
             accumulated_losses_dict += NumbersDict(losses_dict)
-            print("step %i, loss: %f" % (step_idx, total_loss.detach().cpu().numpy()), file=log.v4)
-
+            print(
+                "step %i, loss: %f, took: %.3fs"
+                % (step_idx, total_loss.detach().cpu().numpy(), time.time() - step_time_start),
+                file=log.v4,
+            )
             step_idx += 1
 
-        print("Trained %i steps" % step_idx)
+        print("Trained %i steps, took %.3fs" % (step_idx, time.time() - epoch_start_time))
 
         accumulated_losses_dict = accumulated_losses_dict / step_idx
         self.learning_rate_control.set_epoch_error(self.epoch, dict(accumulated_losses_dict))
@@ -176,6 +176,7 @@ class Engine(EngineBase):
         init_train_step_run_ctx(device=self._device)
 
         for dataset_name, dataset in self.eval_datasets.items():
+            dataset_start_time = time.time()
             print(f"Evaluating dataset {dataset_name!r}'", file=log.v3)
 
             data_loader = self._eval_dataloaders[dataset_name]
@@ -186,21 +187,22 @@ class Engine(EngineBase):
 
             with torch.no_grad():
                 for data in data_loader:
+                    step_time_start = time.time()
                     run_ctx = get_run_ctx()
                     run_ctx.init_step()
 
-                    self._run_step(data)
-
-                    losses_dict = run_ctx.losses
-                    total_loss = run_ctx.total_loss()
+                    total_loss, losses_dict = self.run_train_step(data, run_ctx)
 
                     total_loss = total_loss.detach().cpu().numpy()
                     losses_dict = {
                         dataset_name + "_loss_" + name: float(loss.loss.detach().cpu().numpy())
                         for name, loss in losses_dict.items()
                     }
-                    print("step %i, loss: %f" % (step_idx, total_loss), file=log.v4)
-
+                    print(
+                        "step %i, loss: %f, took: %.3fs"
+                        % (step_idx, total_loss.detach().cpu().numpy(), time.time() - step_time_start),
+                        file=log.v4,
+                    )
                     accumulated_loss += total_loss
                     accumulated_losses_dict += NumbersDict(losses_dict)
                     step_idx += 1
@@ -211,7 +213,12 @@ class Engine(EngineBase):
 
             self.learning_rate_control.set_epoch_error(self.epoch, dict(accumulated_losses_dict))
 
-            print("Total loss for '{}': {:.6}".format(dataset_name, accumulated_loss), file=log.v3)
+            print(
+                "Total loss for '{}': {:.6}, took: %.3f".format(
+                    dataset_name, accumulated_loss, time.time() - dataset_start_time
+                ),
+                file=log.v3,
+            )
 
         self.learning_rate_control.save()
 
@@ -246,19 +253,51 @@ class Engine(EngineBase):
             except ImportError:
                 raise ModuleNotFoundError("Possible type error in DataLoader2 due to missing module 'dill'") from exc
 
-    def _run_step(self, data):
+    def run_train_step(self, data: dict[str, torch.Tensor], run_ctx: RunCtx) -> Tuple[Tensor, Dict[str, Tensor]]:
         """
-        :param dict[str, torch.Tensor] data: model inputs for the step
+        :param data: model inputs for the step
+        :param run_ctx: the current run ctx object
         :return: total loss (weighted sum) calculated for the step, and individual losses as a name -> value mapping
-        :rtype: tuple[torch.Tensor, dict[str, torch.Tensor]]
         """
         assert isinstance(data, dict) and data
-        data = {
-            k: v.cpu() if k.endswith(":seq_len") else v.to(self._device) for (k, v) in data.items()
-        }  # Sequence lengths have to be on CPU for the later call to rnn.pack_padded_sequence
+        # move all data to the target device as default
+        # note that in some cases, e.g. for using rnn.pack_padded_sequence you need to have
+        # length tensors on CPU
+        data = {k: v.to(self._device) for (k, v) in data.items()}
 
         sentinel_kw = {"__fwd_compatible_random_arg_%i" % int(random() * 100): None}
-        self._train_step_func(model=self._model, data=data, run_ctx=get_run_ctx(), **sentinel_kw)
+        self._train_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
+
+        losses_dict = run_ctx.losses
+        total_loss = run_ctx.total_loss()
+
+        self._updater.get_optimizer().zero_grad()
+        total_loss.backward()
+        self._updater.get_optimizer().step()
+
+        return total_loss, losses_dict
+
+    def run_eval_step(self, data: dict[str, torch.Tensor], run_ctx: RunCtx) -> Tuple[Tensor, Dict[str, Tensor]]:
+        """
+        :param data: model inputs for the step
+        :param run_ctx: the current run ctx object
+        :return: total loss (weighted sum) calculated for the step, and individual losses as a name -> value mapping
+        """
+        assert isinstance(data, dict) and data
+        # move all data to the target device as default
+        # note that in some cases, e.g. for using rnn.pack_padded_sequence you need to have
+        # length tensors on CPU
+        data = {k: v.to(self._device) for (k, v) in data.items()}
+
+        sentinel_kw = {"__fwd_compatible_random_arg_%i" % int(random() * 100): None}
+        # currently we only support the _train_step_func,
+        # this can be an optional _eval_step_func later on
+        self._train_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
+
+        losses_dict = run_ctx.losses
+        total_loss = run_ctx.total_loss()
+
+        return total_loss, losses_dict
 
     def _load_model(self, *, epoch: int, step: int):
         """
@@ -373,11 +412,9 @@ class Engine(EngineBase):
 
         self._updater.save_optimizer(filename)
 
-        # clean older optimizer
+        # keep only the last two optimizer states (two in case one file gets corrupted)
         clean_epoch = self.epoch - 2
         if clean_epoch > 0:
             filename = self.get_epoch_model_filename(epoch=clean_epoch) + ".opt.pt"
             if os.path.isfile(filename):
                 os.unlink(filename)
-
-
