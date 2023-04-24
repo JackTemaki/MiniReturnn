@@ -31,6 +31,7 @@ from returnn.datasets import Dataset, init_dataset, init_dataset_via_str
 from returnn.datasets.hdf import HDFDataset
 from returnn.util import debug as debug_util
 from returnn.util import basic as util
+from returnn.engine.base import EngineBase
 
 # These imports are not directly used here, but make them available, as other code imports them from here.
 # noinspection PyUnresolvedReferences
@@ -124,7 +125,6 @@ def init_log():
     log.init_by_config(config)
 
 
-
 # noinspection PyShadowingNames
 def load_data(config, files_config_key, **kwargs):
     """
@@ -193,12 +193,13 @@ def init_engine():
     """
     global engine, config
     from .torch.engine import Engine
+
     assert config is not None, "Engine can not be initialized without a config defined"
     if config.is_typed("CustomEngine") and config.is_of_type("CustomEngine", typing.Callable):
         CustomEngine = config.typed_value("CustomEngine")
         print("Using custom engine from config", file=log.v5)
         engine = CustomEngine(config=config)
-        assert isinstance(CustomEngine, EngineBase)
+        assert isinstance(engine, EngineBase)
     else:
         engine = Engine(config=config)
 
