@@ -92,7 +92,7 @@ class ChunkingIterDataPipe(torch.utils.data.IterDataPipe):
 
         self._dataset = dataset
         # noinspection PyProtectedMember
-        self._chunk_size, self._chunk_step, custom_chunk_func = ReturnnDataset._parse_chunking(chunking)
+        self._chunk_size, self._chunk_step, custom_chunk_func = self._parse_chunking(chunking)
         assert not custom_chunk_func, f"Custom chunking function not supported, {chunking!r}"
 
     def __iter__(self):
@@ -150,18 +150,27 @@ class ChunkingIterDataPipe(torch.utils.data.IterDataPipe):
     @staticmethod
     def _parse_chunking(chunking):
         """
-        Similar to returnn.datasets.basic.Dataset._parse_chunking().
+        Parse the different chunking formats.
+
+        TODO: This should be cleaned up.
 
         :param None|int|(int,int)|dict|(dict,dict) chunking: see __init__()
         :return: chunk_size, chunk_step
-        :rtype: (NumbersDict,NumbersDict)
+        :rtype: (NumbersDict,NumbersDict,Callable)
         """
+        if callable(chunking):
+            return None, None, chunking
+        if isinstance(chunking, str):
+            if ":" in chunking:
+                chunking = tuple(map(int, chunking.split(":")))
+            else:
+                chunking = int(chunking)
         if not isinstance(chunking, (tuple, list)):
             chunking = (chunking, None)
         chunk_size, chunk_step = chunking
         if chunk_size is None:
             chunk_size = 0
-        assert isinstance(chunk_size, (int, dict))
+        assert isinstance(chunk_size, (int, dict, NumbersDict))
         chunk_size = NumbersDict(chunk_size)
         assert chunk_size.min_value() > 0, "chunk size must not be negative"
         if chunk_step in (None, 0):
@@ -170,7 +179,7 @@ class ChunkingIterDataPipe(torch.utils.data.IterDataPipe):
         chunk_step = NumbersDict(chunk_step)
         assert sorted(chunk_step.keys()) == sorted(chunk_size.keys())
         assert chunk_step.min_value() > 0, "chunking step must be positive"
-        return chunk_size, chunk_step
+        return chunk_size, chunk_step, None
 
 
 # noinspection PyAbstractClass

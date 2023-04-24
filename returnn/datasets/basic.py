@@ -171,38 +171,6 @@ class Dataset(object):
         return 0
 
     @staticmethod
-    def _parse_chunking(chunking):
-        """
-        :param None|str|int|(int,int)|dict|(dict,dict)|(NumbersDict,NumbersDict)|function chunking:
-          as it comes from the config / from the user
-        :return: chunk_size, chunk_step, custom_chunking_func
-        :rtype: (NumbersDict|None,NumbersDict|None,function|None)
-        """
-        if callable(chunking):
-            return None, None, chunking
-        if isinstance(chunking, str):
-            if ":" in chunking:
-                chunking = tuple(map(int, chunking.split(":")))
-            else:
-                chunking = int(chunking)
-        if not isinstance(chunking, (tuple, list)):
-            chunking = (chunking, None)
-        chunk_size, chunk_step = chunking
-        if chunk_size is None:
-            chunk_size = 0
-        assert isinstance(chunk_size, (int, dict, NumbersDict))
-        chunk_size = NumbersDict(chunk_size)
-        assert chunk_size == 0 or chunk_size.min_value() > 0, "chunk size must not be negative"
-        if chunk_step in (None, 0):
-            chunk_step = chunk_size
-        assert isinstance(chunk_step, (int, dict, NumbersDict))
-        chunk_step = NumbersDict(chunk_step)
-        if chunk_size != 0:
-            assert sorted(chunk_step.keys()) == sorted(chunk_size.keys())
-            assert chunk_step.max_value() > 0, "chunking step must be positive (for some key)"
-        return chunk_size, chunk_step, None
-
-    @staticmethod
     def _load_seq_list_file(filename, use_cache_manager=False, expect_list=True):
         """
         :param str filename:
