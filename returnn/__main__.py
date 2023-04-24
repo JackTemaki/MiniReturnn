@@ -156,17 +156,13 @@ def load_data(config, files_config_key, **kwargs):
     return data, cache_leftover
 
 
-def init_data(config: Config):
+def init_data():
     """
     Initializes the globals train,dev,eval of type Dataset.
     """
     global train_data, dev_data, eval_data
-    dev_data, extra_cache_bytes_dev = load_data(
-        config, "dev", **Dataset.get_default_kwargs_eval(config=config)
-    )
-    eval_data, extra_cache_bytes_eval = load_data(
-        config, "eval", **Dataset.get_default_kwargs_eval(config=config)
-    )
+    dev_data, extra_cache_bytes_dev = load_data(config, "dev", **Dataset.get_default_kwargs_eval(config=config))
+    eval_data, extra_cache_bytes_eval = load_data(config, "eval", **Dataset.get_default_kwargs_eval(config=config))
     train_data, extra_train = load_data(config, "train")
 
 
