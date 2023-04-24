@@ -13,16 +13,13 @@ __maintainer__ = "Patrick Doetsch"
 __email__ = "doetsch@i6.informatik.rwth-aachen.de"
 
 from threading import RLock
-from random import Random, random
-import sys
+from random import Random
 import os
 import numpy
 import functools
 import typing
 from typing import Optional, Union, Type, Dict, List
 
-from returnn.log import log
-from returnn.engine.batch import Batch, BatchSetGenerator
 from returnn.datasets.util.vocabulary import Vocabulary
 from returnn.util.basic import try_run, NumbersDict, OptionalNotImplementedError
 
