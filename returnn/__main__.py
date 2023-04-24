@@ -143,7 +143,6 @@ def load_data(config, files_config_key, **kwargs):
         config_opts = config.typed_value(files_config_key)
         assert isinstance(config_opts, dict)
         kwargs.update(config_opts)
-        Dataset.kwargs_update_from_config(config, kwargs)
         data = init_dataset(kwargs)
     elif config.is_typed(files_config_key) and callable(config.typed_value(files_config_key)):
         data = init_dataset(config.typed_value(files_config_key), default_kwargs=kwargs)
@@ -161,8 +160,8 @@ def init_data():
     Initializes the globals train,dev,eval of type Dataset.
     """
     global train_data, dev_data, eval_data
-    dev_data, extra_cache_bytes_dev = load_data(config, "dev", **Dataset.get_default_kwargs_eval(config=config))
-    eval_data, extra_cache_bytes_eval = load_data(config, "eval", **Dataset.get_default_kwargs_eval(config=config))
+    dev_data, extra_cache_bytes_dev = load_data(config, "dev")
+    eval_data, extra_cache_bytes_eval = load_data(config, "eval")
     train_data, extra_train = load_data(config, "train")
 
 
