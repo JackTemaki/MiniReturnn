@@ -55,9 +55,15 @@ def collate_batch(batch: List[Dict[str, numpy.ndarray]]) -> Dict[str, torch.Tens
     res = {}
     for key in data_keys:
         ls = [create_tensor(sample[key]) for sample in batch]
-        padded = torch.nn.utils.rnn.pad_sequence(ls, batch_first=True, padding_value=0)
+        num_axis = len(ls[0].size())
+        if num_axis > 0:
+            padded = torch.nn.utils.rnn.pad_sequence(ls, batch_first=True, padding_value=0)
+            for i in range(num_axis):
+                res["%s:size%i" % (key, i + 1)] = torch.tensor([v.shape[i] for v in ls])
+        else:
+            padded = torch.stack(ls)
         res[key] = padded
-        res["%s:seq_len" % key] = torch.tensor([v.shape[0] for v in ls])
+        res["%s:size0" % key] = torch.tensor(len(ls))
 
     return res
 
@@ -211,7 +217,10 @@ class BatchingIterDataPipe(torch.utils.data.IterDataPipe):
                 current_max_sequence_lengths = NumbersDict(0)
 
             # TODO: This assumes all data has time as first dimension. Currently we can't know better..
-            sequence_lengths = NumbersDict({data_key: data.shape[0] for data_key, data in data_dict.items()})
+            # Scalars are treated as length 1
+            sequence_lengths = NumbersDict(
+                {data_key: (data.shape[0] if len(data.shape) > 0 else 1) for data_key, data in data_dict.items()}
+            )
 
             max_sequence_lengths_if_included = NumbersDict.max([current_max_sequence_lengths, sequence_lengths])
             batch_size_if_included = max_sequence_lengths_if_included * (len(current_batch) + 1)  # including padding
