@@ -160,8 +160,6 @@ class GeneratingDataset(Dataset):
         # seed value based on epoch and corpus_seq_idx in order to get deterministic behavior
         self.random.seed((self._get_random_seed_for_epoch(epoch=self.epoch), corpus_seq_idx))
         seq = self.generate_seq(corpus_seq_idx)
-        if self.window > 1:
-            seq.features["data"] = self._sliding_window(seq.features["data"])
         return seq
 
     def generate_seq(self, seq_idx: int) -> DatasetSeq:
@@ -1029,7 +1027,7 @@ class StaticDataset(CachedDataset2):
         self.num_inputs = input_dim
         output_dim = convert_data_dims(output_dim, leave_dict_as_is=False)
         if "data" not in output_dim and input_dim is not None:
-            output_dim["data"] = (input_dim * self.window, 2)  # not sparse
+            output_dim["data"] = (input_dim, 2)  # not sparse
         self.num_outputs = output_dim
 
         self._seq_order = None

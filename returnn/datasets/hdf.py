@@ -325,8 +325,6 @@ class HDFDataset(CachedDataset):
 
             inputs = self.cached_h5_datasets[file_idx]["inputs"]
             data = inputs[start_pos[0] : end_pos[0]]
-            if self.window > 1:
-                data = self._sliding_window(data)
 
         else:
             if key not in self.cached_h5_datasets[file_idx]:

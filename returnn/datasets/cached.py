@@ -57,7 +57,7 @@ class CachedDataset(Dataset):
         super(CachedDataset, self).initialize()
 
         if self.cache_byte_size_limit_at_start > 0:
-            self.nbytes = numpy.array([], dtype=numpy.float32).itemsize * (self.num_inputs * self.window + 1 + 1)
+            self.nbytes = numpy.array([], dtype=numpy.float32).itemsize * (self.num_inputs + 1 + 1)
 
             # Calculate cache sizes.
             temp_cache_size_bytes = max(0, self.cache_byte_size_total_limit)
@@ -150,7 +150,6 @@ class CachedDataset(Dataset):
             return
         assert self.num_seqs > 0
         assert self.num_inputs > 0
-        assert self.window > 0
         self.preload_set = set([])
         self.alloc_intervals = [
             (0, 0, numpy.zeros([1] + self.get_data_shape("data"), dtype=self.get_data_dtype("data"))),
@@ -293,8 +292,6 @@ class CachedDataset(Dataset):
         o = self._seq_start[idc][0] - self._seq_start[self.alloc_intervals[idi][0]][0]
         l = data.shape[0]
         x = data
-        if self.window > 1:
-            x = self._sliding_window(x)
         self.alloc_intervals[idi][2][o : o + l] = x
 
     def alloc_interval_index(self, ids):
@@ -603,7 +600,7 @@ class CachedDataset(Dataset):
 
     def get_data_dim(self, key):
         if key == "data" and self.num_inputs > 0:  # if num_inputs == 0, we allow "data" as a target key
-            return self.num_inputs * self.window
+            return self.num_inputs
         return self.num_outputs[key][0]
 
     def get_targets(self, target, sorted_seq_idx):

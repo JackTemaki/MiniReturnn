@@ -83,7 +83,6 @@ class Dataset(object):
         self.num_outputs = (
             None
         )  # type: typing.Optional[typing.Dict[str,typing.Tuple[int,int]]]  # tuple is num-classes, len(shape).  # nopep8
-        self.window = window
         self.seq_ordering = seq_ordering  # "default", "sorted" or "random". See self.get_seq_order_for_epoch().
         self.fixed_random_seed = fixed_random_seed
         if random_seed_offset is None:
@@ -192,21 +191,6 @@ class Dataset(object):
         else:
             seq_list = open(filename).read().splitlines()
         return seq_list
-
-    def _sliding_window(self, xr):
-        """
-        :type xr: numpy.ndarray
-        :rtype: numpy.ndarray
-        """
-        # noinspection PyProtectedMember
-        from numpy.lib.stride_tricks import as_strided
-
-        x = numpy.concatenate([self.zpad, xr, self.zpad])
-        return as_strided(
-            x,
-            shape=(x.shape[0] - self.window + 1, 1, self.window, self.num_inputs),
-            strides=(x.strides[0], x.strides[1] * self.num_inputs) + x.strides,
-        ).reshape((xr.shape[0], self.num_inputs * self.window))
 
     def is_cached(self, start, end):
         """
@@ -535,16 +519,8 @@ class Dataset(object):
         # We expect that the following attributes are already set elsewhere, by a derived class.
         assert self.num_outputs
         if not self.num_inputs:
-            assert not self.window or self.window in (0, 1) or "data" in self.num_outputs
-            return
+            assert "data" in self.num_outputs
         assert self.num_inputs > 0
-        assert self.window > 0
-
-        if int(self.window) % 2 == 0:
-            self.window += 1
-
-        if self.window > 1:
-            self.zpad = numpy.zeros((int(self.window) // 2, self.num_inputs), dtype=numpy.float32)
 
     def initialize(self):
         """
@@ -742,9 +718,6 @@ class Dataset(object):
         if key in self.num_outputs:
             # num_outputs should have the correct dimension, even for key "data" with self.window > 1.
             return self.num_outputs[key][0]
-        if self.window > 1 and key == "data":
-            assert self.num_inputs
-            return self.num_inputs * self.window
         return 1  # unknown
 
     def get_data_dtype(self, key):
@@ -840,18 +813,6 @@ class Dataset(object):
         if data.ndim == 0:
             return vocab.labels[data]
         return vocab.get_seq_labels(data)
-
-    def get_start_end_frames_full_seq(self, seq_idx):
-        """
-        :param int seq_idx:
-        :return: (start,end) frame, taking context_window into account
-        :rtype: (NumbersDict,NumbersDict)
-        """
-        end = self.get_seq_length(seq_idx)
-        start = NumbersDict.constant_like(0, numbers_dict=end)
-        start -= self.ctx_left
-        end += self.ctx_right
-        return start, end
 
     def sample(self, seq_idx):
         """
