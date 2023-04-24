@@ -643,57 +643,6 @@ class ClusteringDataset(CachedDataset2):
         data["cluster_idx"] = numpy.array([self.cluster_map[seq_name]], dtype=self.cluster_idx_dtype)
         return DatasetSeq(seq_idx=seq_idx, features=data["data"], targets=data)
 
-    # noinspection PyMethodOverriding
-    def _generate_batches(
-        self, recurrent_net, batch_size, max_seqs=-1, seq_drop=0.0, max_seq_length=None, used_data_keys=None
-    ):
-        import sys
-
-        if max_seq_length is None:
-            max_seq_length = sys.maxsize
-        if batch_size == 0:
-            batch_size = sys.maxsize
-        assert batch_size > 0
-        if max_seqs == -1:
-            max_seqs = float("inf")
-        assert max_seqs > 0
-        assert seq_drop <= 1.0
-        from returnn.engine.batch import Batch
-
-        batch = Batch()
-        last_seq_idx = None
-        for seq_idx, t_start, t_end in self.iterate_seqs(recurrent_net=recurrent_net, used_data_keys=used_data_keys):
-            if self.single_cluster:
-                if last_seq_idx is not None and last_seq_idx != seq_idx:
-                    last_seq_name = self.get_tag(last_seq_idx)
-                    seq_name = self.get_tag(seq_idx)
-                    if self.cluster_map[last_seq_name] != self.cluster_map[seq_name]:
-                        print("ClusteringDataset::_generate_batches", last_seq_idx, "is not", seq_idx, file=log.v5)
-                        yield batch
-                        batch = Batch()
-            length = t_end - t_start
-            if max_seq_length < 0 and length["classes"] > -max_seq_length:
-                continue
-            elif 0 < max_seq_length < length.max_value():
-                continue
-            if length.max_value() > batch_size:
-                print(
-                    "warning: sequence length (%i) larger than limit (%i)" % (length.max_value(), batch_size),
-                    file=log.v4,
-                )
-            if self.rnd_seq_drop.random() < seq_drop:
-                continue
-            dt, ds = batch.try_sequence_as_slice(length)
-            if ds > 1 and ((dt * ds).max_value() > batch_size or ds > max_seqs):
-                yield batch
-                batch = Batch()
-            print("batch add slice length", length, file=log.v5)
-            batch.add_sequence_as_slice(seq_idx=seq_idx, seq_start_frame=t_start, length=length)
-            last_seq_idx = seq_idx
-
-        if batch.get_all_slices_num_frames().max_value() > 0:
-            yield batch
-
 
 class ConcatDataset(CachedDataset2):
     """

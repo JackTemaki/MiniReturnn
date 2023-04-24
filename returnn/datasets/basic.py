@@ -32,46 +32,7 @@ class Dataset(object):
     Base class for any dataset. This defines the dataset API.
     """
 
-    @staticmethod
-    def kwargs_update_from_config(config, kwargs):
-        """
-        :type config: returnn.config.Config
-        :type kwargs: dict[str]
-        """
 
-        def set_or_remove(key, value):
-            """
-            :param str key:
-            :param value:
-            """
-            if key in kwargs and kwargs[key] is None:
-                del kwargs[key]
-            if value is not None and key not in kwargs:
-                kwargs[key] = value
-
-        set_or_remove("window", config.int("window", 0) or None)
-        set_or_remove("context_window", config.typed_value("context_window"))
-        set_or_remove("chunking", config.opt_typed_value("chunking", None))
-        set_or_remove("seq_ordering", config.value("batching", None))
-        set_or_remove("shuffle_frames_of_nseqs", config.int("shuffle_frames_of_nseqs", 0) or None)
-        set_or_remove("min_chunk_size", config.opt_typed_value("min_chunk_size", 0) or None)
-        set_or_remove("chunking_variance", config.float("chunking_variance", 0))
-
-    @staticmethod
-    def get_default_kwargs_eval(config):
-        """
-        :param returnn.config.Config config:
-        :rtype: dict[str]
-        """
-        # For dev/eval, by default, we should not do chunking (i.e. chunking = "0").
-        chunking = "0"
-        if config.value("on_size_limit", "ignore") == "chunk":
-            chunking = config.value("batch_size", "0")
-        elif config.value("chunking", "0") == "1":  # MLP mode
-            chunking = "1"
-        elif config.bool("chunk_eval", False):
-            chunking = config.value("chunking", "0")
-        return dict(chunking=chunking, seq_ordering="sorted", shuffle_frames_of_nseqs=0)
 
     @classmethod
     def from_config(cls, config, **kwargs):
@@ -80,15 +41,12 @@ class Dataset(object):
         :param dict[str] kwargs: passed on to __init__
         :rtype: Dataset
         """
-        cls.kwargs_update_from_config(config, kwargs)
         return cls(**kwargs)
 
     def __init__(
         self,
         name=None,
         window=1,
-        context_window=None,
-        chunking=None,
         seq_ordering="default",
         fixed_random_seed=None,
         random_seed_offset=None,
@@ -98,16 +56,12 @@ class Dataset(object):
         unique_seq_tags=False,
         seq_order_seq_lens_file=None,
         shuffle_frames_of_nseqs=0,
-        min_chunk_size=0,
-        chunking_variance=0,
         estimated_num_seqs=None,
     ):
         """
         :param str name: e.g. "train" or "eval"
         :param int window: features will be of dimension window * feature_dim, as we add a context-window around.
           not all datasets support this option.
-        :param None|int|dict|NumbersDict|(dict,dict) context_window: will add this context for each chunk
-        :param None|str|int|(int,int)|dict|(dict,dict)|function chunking: "chunk_size:chunk_step"
         :param str seq_ordering: "batching"-option in config. e.g. "default", "sorted" or "random".
           See self.get_seq_order_for_epoch() for more details.
         :param int|None fixed_random_seed: for the shuffling, e.g. for seq_ordering='random'.
@@ -154,37 +108,6 @@ class Dataset(object):
         self._num_timesteps = 0
         self._num_seqs = 0
         self._estimated_num_seqs = estimated_num_seqs
-        self.min_chunk_size = NumbersDict(min_chunk_size)
-        self.chunking_variance = chunking_variance
-        self._chunking = chunking
-        self.chunk_size, self.chunk_step, self.custom_chunking_func = self._parse_chunking(chunking)
-        self._context_window = context_window
-        if isinstance(context_window, (tuple, list)):
-            assert len(context_window) == 2
-            for elem in context_window:
-                assert isinstance(elem, dict)
-            # assume that first element of tuple|list is for left context and second element for right context
-            self.ctx_left = NumbersDict(numbers_dict=context_window[0])
-            self.ctx_right = NumbersDict(numbers_dict=context_window[1])
-        else:
-            if context_window is None:
-                context_window = NumbersDict()
-            elif isinstance(context_window, int):
-                context_window = NumbersDict(numbers_dict={"data": context_window})
-            elif isinstance(context_window, dict):
-                context_window = NumbersDict(numbers_dict=context_window)
-            assert isinstance(context_window, NumbersDict)
-            # ctx_total is how much frames we add additionally.
-            # One less because the original frame also counts,
-            # and context_window=1 means that we just have that single frame.
-            ctx_total = NumbersDict.max([context_window, 1]) - 1
-            # In case ctx_total is odd / context_window is even, we have to decide where to put one more frame.
-            # To keep it consistent with e.g. 1D convolution with a kernel of even size, we add one more to the right.
-            # See test_tfconv1d_evensize().
-            self.ctx_left = ctx_total // 2
-            self.ctx_right = ctx_total - self.ctx_left
-        assert isinstance(self.ctx_left, NumbersDict)
-        assert isinstance(self.ctx_right, NumbersDict)
         self.shuffle_frames_of_nseqs = shuffle_frames_of_nseqs
         self.epoch = None
         self.zpad = None
@@ -703,37 +626,6 @@ class Dataset(object):
         # For new-style subclasses, which just provide get_data.
         return self.get_data(sorted_seq_idx, target)
 
-    def get_data_slice(self, seq_idx, key, start_frame, end_frame):
-        """
-        :param int seq_idx:
-        :param str key:
-        :param int start_frame:
-        :param int end_frame:
-        :return: x[start_frame:end_frame], with x = get_data(seq_idx, key)
-        :rtype: numpy.ndarray
-        """
-        if "[sparse:" in key and (start_frame > 0 or end_frame < self.get_seq_length(seq_idx)[key]):
-            return self._get_data_slice_sparse(seq_idx, key, start_frame, end_frame)
-        data = self.get_data(seq_idx, key)
-        return data[start_frame:end_frame]
-
-    def _get_data_slice_sparse(self, seq_idx, key, start_frame, end_frame):
-        key_prefix = key[: key.index("[")]
-        sparse_info = key[key.index("[") + 1 : key.index("]")].split(":")
-        assert len(sparse_info) == 4
-        assert tuple(sparse_info[0:3]) == ("sparse", "coo", "2")
-        s0 = self.get_data(seq_idx, "%s[sparse:coo:2:0]" % key_prefix)
-        assert s0 is not None
-        from returnn.native_op import sparse_splice_offset_numpy
-
-        s0_start = sparse_splice_offset_numpy(s0, start_frame)
-        s0_end = sparse_splice_offset_numpy(s0, end_frame)
-        if sparse_info[-1] == "0":
-            return s0[s0_start:s0_end] - start_frame
-        else:
-            data = self.get_data(seq_idx, key)
-            return data[s0_start:s0_end]
-
     def get_tag(self, sorted_seq_idx):
         """
         :param int sorted_seq_idx:
@@ -984,107 +876,6 @@ class Dataset(object):
             return vocab.labels[data]
         return vocab.get_seq_labels(data)
 
-    def iterate_seqs(self, recurrent_net=True, used_data_keys=None):
-        """
-        Takes chunking into consideration.
-
-        :param bool recurrent_net: whether the order of frames matter
-        :param set(str)|None used_data_keys:
-        :return: generator which yields tuples (seq index, seq start, seq end)
-        :rtype: list[(int,NumbersDict,NumbersDict)]
-        """
-        if self.custom_chunking_func:
-            sentinel_kw = {"__fwd_compatible_random_arg_%i" % int(random() * 100): None}
-            for seq_idx, t_start, t_end in self.custom_chunking_func(
-                dataset=self, seq_idx_start=0, recurrent_net=recurrent_net, used_data_keys=used_data_keys, **sentinel_kw
-            ):
-                yield seq_idx, t_start, t_end
-            return
-
-        chunk_size = self.chunk_size
-        chunk_step = self.chunk_step
-        if not recurrent_net:
-            if chunk_size:
-                print("Non-recurrent network, chunk size %s:%s ignored" % (chunk_size, chunk_step), file=log.v4)
-                chunk_size = 0
-        chunk_size = NumbersDict(chunk_size)
-        chunk_step = NumbersDict(chunk_step)
-        chunk_size_orig = chunk_size.copy()
-        chunk_step_orig = chunk_step.copy()
-
-        s = 0
-        while self.is_less_than_num_seqs(s):
-            length = self.get_seq_length(s)
-            if chunk_size == 0:
-                yield s, NumbersDict.constant_like(0, numbers_dict=length), length
-            else:
-                default_key = "data"
-                if used_data_keys is not None:
-                    length = NumbersDict({k: length[k] for k in used_data_keys})
-                    if default_key not in used_data_keys:
-                        default_key = sorted(used_data_keys)[0]
-                    if chunk_step[default_key] == 0:  # allow some keys with zero chunk-step
-                        assert chunk_step.max_value() > 0
-                        default_key = [key for key in sorted(used_data_keys) if chunk_step[key] > 0][0]
-                    if self.chunking_variance > 0:
-                        chunking_variance = 1.0 - self.rnd_seq_drop.random() * self.chunking_variance
-                        for k in used_data_keys:
-                            chunk_size[k] = max(int(chunk_size_orig[k] * chunking_variance), 1)
-                            chunk_step[k] = max(int(chunk_step_orig[k] * chunking_variance), 1)
-                        # In case there are data keys with different chunk sizes,
-                        # make sure we keep the original ratio.
-                        smallest_key = [
-                            k
-                            for k in sorted(used_data_keys, key=lambda key: (chunk_step_orig[key], key))
-                            if chunk_step_orig[k] > 0
-                        ][0]
-                        for k in used_data_keys:
-                            if chunk_size_orig[k] > chunk_size_orig[smallest_key]:
-                                if chunk_size_orig[k] % chunk_size_orig[smallest_key] == 0:
-                                    ratio = chunk_size_orig[k] // chunk_size_orig[smallest_key]
-                                    chunk_size[k] = chunk_size[smallest_key] * ratio
-                                    chunk_step[k] = chunk_step[smallest_key] * ratio
-                assert chunk_step[default_key] > 0
-                t = NumbersDict.constant_like(0, numbers_dict=length)
-                # There are usually the 'data' (input) and 'classes' (targets) data-keys in `length`
-                # but there can be others.
-                # We expect them all of the same length so that we can do chunking.
-                # In case that some length is 0 or 1,
-                # we treat it special and always return the full seq repeated for every chunk.
-                keys_with_full_seqs = []
-                for key in length.keys():
-                    if chunk_step[key] == chunk_step[default_key]:
-                        if length[key] == length[default_key]:
-                            continue  # ok
-                    if length[key] <= 1:  # special case as explained above
-                        keys_with_full_seqs.append(key)
-                        continue
-                    if chunk_step[key] == chunk_step[default_key]:
-                        raise Exception("Chunking with multiple data-keys of different length: %r" % length)
-                    else:
-                        limit = self.min_chunk_size[key] or 1
-                        limit_default = self.min_chunk_size[default_key] or 1
-                        nr_of_chunks = (length[key] - limit) // chunk_step[key] + 1
-                        nr_of_chunks_default = (length[default_key] - limit_default) // chunk_step[default_key] + 1
-                        assert nr_of_chunks == nr_of_chunks_default, (
-                            "%s: iterate seqs with chunking:"
-                            " length %r, chunk size/step %r/%r (min %r), key %r (default %r)"
-                        ) % (self, length, chunk_size, chunk_step, self.min_chunk_size, key, default_key)
-                while length[default_key] > t[default_key]:
-                    chunk_start = NumbersDict(t)
-                    chunk_end = NumbersDict.min([t + chunk_size, length])
-                    for key in keys_with_full_seqs:
-                        chunk_start[key] = 0
-                        chunk_end[key] = length[key]
-                    if length.value is None:
-                        chunk_start.value = None
-                        chunk_end.value = None
-                    yield s, chunk_start, chunk_end
-                    t += chunk_step
-                    if any([length[key] - t[key] <= self.min_chunk_size[key] for key in length.keys()]):
-                        break
-            s += 1
-
     def get_start_end_frames_full_seq(self, seq_idx):
         """
         :param int seq_idx:
@@ -1106,147 +897,6 @@ class Dataset(object):
             weight = self.weights[seq_idx]
             return weight[0] >= weight[1]
         return True
-
-    def _generate_batches(
-        self,
-        recurrent_net,
-        batch_size,
-        max_seqs=-1,
-        max_seq_length=sys.maxsize,
-        max_pad_size=None,
-        min_seq_length=0,
-        pruning=0.0,
-        seq_drop=0.0,
-        max_total_num_seqs=-1,
-        used_data_keys=None,
-    ):
-        """
-        :param bool recurrent_net: If True, the batch might have a batch seq dimension > 1.
-          Otherwise, the batch seq dimension is always 1 and multiple seqs will be concatenated.
-        :param int|dict[str,int]|NumbersDict batch_size: Max number of frames in one batch.
-        :param int|dict[str,int]|NumbersDict max_pad_size: Max number of zero-padded frames in one batch.
-        :param int max_seqs: Max number of seqs per batch.
-        :param int max_total_num_seqs:
-        :param int|dict[str,int]|NumbersDict max_seq_length:
-        :param set(str)|None used_data_keys:
-        """
-        if not batch_size:
-            raise Exception("batch_size must be set and be greater than 0")
-        batch_size = NumbersDict(batch_size)
-        assert not batch_size.any_compare(NumbersDict(0), (lambda a, b: a <= b))
-        max_pad_size = NumbersDict(max_pad_size)
-        if max_seqs == -1:
-            max_seqs = float("inf")
-        if not max_seq_length:
-            max_seq_length = sys.maxsize
-        if isinstance(max_seq_length, int) and max_seq_length < 0:
-            max_seq_length = {"classes": -max_seq_length}
-        max_seq_length = NumbersDict(max_seq_length)
-        min_seq_length = NumbersDict(min_seq_length)
-        assert max_seqs > 0
-        assert seq_drop <= 1.0
-        if not max_total_num_seqs or max_total_num_seqs < 0:
-            max_total_num_seqs = float("inf")
-        batch = Batch()
-        total_num_seqs = 0
-        last_seq_idx = -1
-        avg_weight = sum([v[0] for v in self.weights.values()]) / (len(self.weights.keys()) or 1)
-        for idx in self.weights:
-            self.weights[idx][1] = random() * avg_weight * pruning
-            self.weights[idx][0] *= 1.0 + pruning
-        for seq_idx, t_start, t_end in self.iterate_seqs(recurrent_net=recurrent_net, used_data_keys=used_data_keys):
-            if not self.sample(seq_idx):
-                continue
-            if total_num_seqs > max_total_num_seqs:
-                break
-            t_start -= self.ctx_left
-            t_end += self.ctx_right
-            if recurrent_net:
-                length = t_end - t_start
-                if length.any_compare(max_seq_length, (lambda a, b: a > b)):
-                    continue
-                if length.any_compare(min_seq_length, (lambda a, b: a < b)):
-                    continue
-                if length.any_compare(batch_size, (lambda a, b: a > b)):
-                    print("warning: sequence length (%r) larger than limit (%r)" % (length, batch_size), file=log.v4)
-                if self.rnd_seq_drop.random() < seq_drop:
-                    continue
-                dt, ds = batch.try_sequence_as_slice(length)
-                if batch.num_slices >= 1:
-                    if (dt * ds).any_compare(batch_size, (lambda a, b: a > b)):
-                        yield batch
-                        batch = Batch()
-                    elif ds > max_seqs:
-                        yield batch
-                        batch = Batch()
-                    elif (dt * ds - batch.get_total_num_frames() - length).any_compare(
-                        max_pad_size, (lambda a, b: a > b)
-                    ):
-                        yield batch
-                        batch = Batch()
-                batch.add_sequence_as_slice(seq_idx=seq_idx, seq_start_frame=t_start, length=length)
-            else:  # Not recurrent.
-                while t_start.max_value() < t_end.max_value():
-                    length = t_end - t_start
-                    num_frames = NumbersDict.min(
-                        [length, batch_size.copy_like(length) - batch.get_all_slices_num_frames().copy_like(length)]
-                    )
-                    assert num_frames.max_value() > 0
-                    batch.add_frames(seq_idx=seq_idx, seq_start_frame=t_start, length=num_frames)
-                    if (
-                        batch.get_all_slices_num_frames().any_compare(batch_size, (lambda a, b: a >= b))
-                        or batch.get_num_seqs() > max_seqs
-                    ):
-                        yield batch
-                        batch = Batch()
-                    t_start += num_frames
-            if seq_idx != last_seq_idx:
-                last_seq_idx = seq_idx
-                total_num_seqs += 1
-
-        if batch.get_all_slices_num_frames().max_value() > 0:
-            yield batch
-
-    def batch_set_generator_cache_whole_epoch(self):
-        """
-        The BatchSetGenerator can cache the list of batches which we generated across epochs.
-        See self.generate_batches() and self._generate_batches().
-        In many cases, the dataset does not support this, and in that case,
-        it is not needed to enable this cache and waste memory.
-        Caching it together with option shuffle_batches could also mean that
-        there will be self.load_seqs() calls with non-monotonic seq-idxs.
-        The only dataset currently which enables this is CachedDataset and thus HDFDataset.
-
-        :return: whether we should enable this cache
-        :rtype: bool
-        """
-        return False
-
-    def generate_batches(self, shuffle_batches=False, **kwargs):
-        """
-        :param bool shuffle_batches:
-        :param kwargs: will be passed to :func:`_generate_batches`
-        :rtype: BatchSetGenerator
-        """
-        return BatchSetGenerator(
-            dataset=self,
-            generator=self._generate_batches(**kwargs),
-            shuffle_batches=shuffle_batches,
-            cache_whole_epoch=self.batch_set_generator_cache_whole_epoch(),
-        )
-
-    @classmethod
-    def index_shape_for_batches(cls, batches, data_key="data"):
-        """
-        :param list[EngineBatch.Batch] batches:
-        :param str data_key:
-        :return: shape as (time, batch)
-        :rtype: (int, int)
-        """
-        shape = [0, 0]  # time, batch
-        for batch in batches:
-            shape = [max(shape[0], batch.max_num_frames_per_slice[data_key]), shape[1] + batch.num_slices]
-        return tuple(shape)
 
 
 class DatasetSeq:
@@ -1352,20 +1002,8 @@ def init_dataset(kwargs, extra_kwargs=None, default_kwargs=None):
     if isinstance(kwargs, str):
         if kwargs.startswith("{"):
             kwargs = eval(kwargs)
-        elif kwargs.startswith("config:"):
-            from returnn.config import get_global_config
-
-            config = get_global_config()
-            data = eval(kwargs[len("config:") :], config.typed_dict, config.typed_dict)
-            return init_dataset(data, extra_kwargs=extra_kwargs, default_kwargs=default_kwargs)
         else:
-            config_str = kwargs
-            kwargs = {}
-            if default_kwargs:
-                kwargs.update(default_kwargs)
-            if extra_kwargs:
-                kwargs.update(extra_kwargs)
-            return init_dataset_via_str(config_str=config_str, **kwargs)
+            assert ValueError("Defining datasets via string is no longer allowed")
     assert isinstance(kwargs, dict)
     kwargs = kwargs.copy()
     assert "class" in kwargs
@@ -1418,10 +1056,7 @@ def init_dataset_via_str(config_str, config=None, **kwargs):
         cls = get_dataset_class(class_name)
     else:
         cls = HDFDataset
-    if config:
-        data = cls.from_config(config, **kwargs)
-    else:
-        data = cls(**kwargs)
+    data = cls(**kwargs)
     if isinstance(data, HDFDataset):
         for f in config_str.split(","):
             if f:
@@ -1461,62 +1096,3 @@ def convert_data_dims(data_dims, leave_dict_as_is=False):
         assert isinstance(v[1], int)
         assert 1 <= v[1]
     return data_dims
-
-
-def shapes_for_batches(batches, data_keys, dataset=None, extern_data=None, enforce_min_len1=False):
-    """
-    :param list[EngineBatch.Batch] batches:
-    :param list[str] data_keys:
-    :param Dataset dataset:
-    :param TFNetwork.ExternData extern_data: detailed data description. only used for TensorFlow
-    :param bool enforce_min_len1:
-    :rtype: dict[str,list[int]] | None
-    """
-    assert dataset or extern_data
-    all_data_keys = set(data_keys)
-
-    # The final device.data.shape is in format (time,batch,feature) in case of Theano.
-    shape = [NumbersDict(0), 0]  # time,batch
-    for batch in batches:
-        shape = [NumbersDict.max([shape[0], batch.max_num_frames_per_slice]), shape[1] + batch.num_slices]
-    if shape[1] == 0:
-        return None
-    assert shape[0].max_value() > 0
-    # Theano has some buggy behaviour with tensors with some shape of zero.
-    # We will just use one dummy frame in that case.
-    # The index will stay zero in that case. (see EngineUtil.assign_dev_data())
-    # However, also see the OutputLayer.output_index() behavior for forwarding.
-    if not extern_data or enforce_min_len1:  # not needed if TensorFlow is used
-        for k in all_data_keys:
-            shape[0][k] = max(shape[0][k], 1)
-
-    if extern_data:
-        d = {}
-        for k in all_data_keys:
-            data_shape = list(extern_data.data[k].batch_shape)
-            data_shape[extern_data.data[k].batch_dim_axis] = shape[1]
-            if extern_data.data[k].have_time_axis():
-                data_shape[extern_data.data[k].time_dim_axis] = shape[0][k]
-            assert all([n is not None for n in data_shape]), "data %r" % extern_data.data[k]
-            d[k] = data_shape
-    else:  # shape via dataset
-        d = {k: [shape[0][k], shape[1]] for k in all_data_keys}
-        for k in all_data_keys:
-            d[k] += dataset.get_data_shape(k)
-    return d
-
-
-def set_config_extern_data_from_dataset(config, dataset):
-    """
-    :param returnn.config.Config config:
-    :param Dataset dataset:
-    """
-    # ExternData supports more fine-grained specification,
-    # however the dataset does not store that in num_outputs.
-    # noinspection PyProtectedMember
-    from returnn.tf.network import _data_kwargs_from_dataset_key
-
-    config.set(
-        "extern_data",
-        {key: _data_kwargs_from_dataset_key(dataset=dataset, key=key) for key in dataset.get_data_keys()},
-    )
