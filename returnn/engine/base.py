@@ -206,4 +206,3 @@ class EngineBase(object):
         if cls.FILE_POSTFIX is None:
             raise NotImplementedError("Missing FILE_POSTFIX in Engine")
         return cls.FILE_POSTFIX
-

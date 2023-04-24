@@ -1923,7 +1923,6 @@ def unicode_to_str(s):
     return s
 
 
-
 def load_txt_vector(filename):
     """
     Expect line-based text encoding in file.
@@ -2093,7 +2092,6 @@ def pip_check_is_installed(pkg_name):
                     line = line[: line.index("==")]
                 _pip_installed_packages.add(line)
     return pkg_name in _pip_installed_packages
-
 
 
 def cleanup_env_var_path(env_var, path_prefix):
@@ -2607,7 +2605,6 @@ class InfiniteRecursionDetected(Exception):
 
 
 _guard_infinite_recursion_cache = threading.local()
-
 
 
 def get_hostname():
