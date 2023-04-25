@@ -43,7 +43,6 @@ class Dataset(object):
     def __init__(
         self,
         name=None,
-        window=1,
         seq_ordering="default",
         fixed_random_seed=None,
         random_seed_offset=None,
@@ -956,8 +955,6 @@ def init_dataset_via_str(config_str, config=None, **kwargs):
     :rtype: Dataset
     """
     kwargs = kwargs.copy()
-    if "window" not in kwargs and config and config.has("window"):
-        kwargs["window"] = config.int("window", 1)
     from returnn.datasets.hdf import HDFDataset
 
     if config_str.startswith("sprint:"):

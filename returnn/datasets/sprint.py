@@ -14,7 +14,7 @@ try:
     import thread
 except ImportError:
     import _thread as thread
-from threading import Condition, RLock, currentThread, Thread
+from threading import Condition, RLock, current_thread, Thread
 import time
 import numpy
 import typing
@@ -157,7 +157,7 @@ class SprintDatasetBase(Dataset):
         """
         assert input_dim > 0
         self.num_inputs = input_dim
-        self.num_outputs = {"data": (input_dim * self.window, 2)}
+        self.num_outputs = {"data": (input_dim, 2)}
         if output_dim > 0:
             self.num_outputs["classes"] = (output_dim, 1)
         if self.bpe:
@@ -274,7 +274,7 @@ class SprintDatasetBase(Dataset):
         if not self.suppress_load_seqs_print:
             print(
                 "%s %s: wait for seqs (%i,%i) (last added: %s) (current time: %s)"
-                % (self, currentThread().name, seq_start, seq_end, self._latest_added_seq(), time.strftime("%H:%M:%S")),
+                % (self, current_thread().name, seq_start, seq_end, self._latest_added_seq(), time.strftime("%H:%M:%S")),
                 file=log.v5,
             )
         while not self._wait_for_seq_can_pass_check(seq_start=seq_start, seq_end=seq_end):
@@ -328,7 +328,7 @@ class SprintDatasetBase(Dataset):
         if start == end:
             return
         if not self.suppress_load_seqs_print:
-            print("%s load_seqs in %s:" % (self, currentThread().name), start, end, end=" ", file=log.v5)
+            print("%s load_seqs in %s:" % (self, current_thread().name), start, end, end=" ", file=log.v5)
         with self.lock:
             super(SprintDatasetBase, self).load_seqs(start, end)
             if not self.suppress_load_seqs_print:
@@ -374,9 +374,6 @@ class SprintDatasetBase(Dataset):
         assert features.shape == (num_frames, self.num_inputs)
         if self.input_stddev != 1:
             features /= self.input_stddev
-        if self.window > 1:
-            features = self._sliding_window(features)
-            assert features.shape == (num_frames, self.num_inputs * self.window)
 
         if targets is None:
             targets = {}

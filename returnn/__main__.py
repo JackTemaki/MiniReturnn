@@ -171,7 +171,7 @@ def print_task_properties():
     """
     if train_data:
         print("Train data:", file=log.v2)
-        print("  input:", train_data.num_inputs, "x", train_data.window, file=log.v2)
+        print("  input:", train_data.num_inputs, file=log.v2)
         print("  output:", train_data.num_outputs, file=log.v2)
         print(" ", train_data.len_info() or "no info", file=log.v2)
     if dev_data:
