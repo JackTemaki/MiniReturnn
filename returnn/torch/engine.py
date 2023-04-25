@@ -21,7 +21,7 @@ from returnn.util import NumbersDict
 from .updater import Updater
 from .data import pipeline as data_pipeline
 from .data import returnn_dataset_wrapper
-from .context import get_run_ctx, init_train_step_run_ctx, init_forward_step_run_ctx, RunCtx
+from .context import get_run_ctx, init_train_step_run_ctx, init_forward_step_run_ctx, RunCtx, Loss
 
 
 class Engine(EngineBase):
@@ -136,6 +136,7 @@ class Engine(EngineBase):
         init_train_step_run_ctx(device=self._device)
 
         accumulated_losses_dict = NumbersDict()
+        accumulated_inv_norm_dict = NumbersDict()
         step_idx = 0
         for data in self._train_dataloader:
             step_time_start = time.time()
@@ -143,22 +144,29 @@ class Engine(EngineBase):
             run_ctx = get_run_ctx()
             run_ctx.init_step()
 
-            total_loss, losses_dict = self.run_train_step(data, run_ctx)
+            total_loss, ctx_losses_dict = self.run_train_step(data, run_ctx)
 
             losses_dict = {
-                "train_loss_" + name: float(loss.loss.detach().cpu().numpy()) for name, loss in losses_dict.items()
+                "train_loss_" + name: float(loss.loss.detach().cpu().numpy()) for name, loss in ctx_losses_dict.items()
+            }
+            inv_norm_dict = {
+                "train_loss_" + name:
+                # in case we have no inv norm factor we use 1 to normalize via the step count
+                float(loss.inv_norm_factor.detach().cpu().numpy()) if loss.inv_norm_factor is not None else 1
+                for name, loss in ctx_losses_dict.items()
             }
             accumulated_losses_dict += NumbersDict(losses_dict)
-            print(
-                "step %i, loss: %f, took: %.3fs"
-                % (step_idx, total_loss.detach().cpu().numpy(), time.time() - step_time_start),
-                file=log.v4,
+            accumulated_inv_norm_dict += NumbersDict(inv_norm_dict)
+            self.print_step_info(
+                f"train epoch {self.epoch}", step_idx, step_start_time=step_time_start,
+                total_loss=float(total_loss.detach().cpu().numpy()),
+                loss_dict=accumulated_losses_dict / accumulated_inv_norm_dict
             )
             step_idx += 1
 
         print("Trained %i steps, took %.3fs" % (step_idx, time.time() - epoch_start_time))
 
-        accumulated_losses_dict = accumulated_losses_dict / step_idx
+        accumulated_losses_dict = accumulated_losses_dict / accumulated_inv_norm_dict
         self.learning_rate_control.set_epoch_error(self.epoch, dict(accumulated_losses_dict))
         self.learning_rate_control.save()
 
@@ -183,6 +191,7 @@ class Engine(EngineBase):
 
             accumulated_loss = 0.0
             accumulated_losses_dict = NumbersDict()
+            accumulated_inv_norm_dict = NumbersDict()
             step_idx = 0
 
             with torch.no_grad():
@@ -191,25 +200,32 @@ class Engine(EngineBase):
                     run_ctx = get_run_ctx()
                     run_ctx.init_step()
 
-                    total_loss, losses_dict = self.run_train_step(data, run_ctx)
+                    total_loss, ctx_losses_dict = self.run_eval_step(data, run_ctx)
 
-                    total_loss = total_loss.detach().cpu().numpy()
                     losses_dict = {
-                        dataset_name + "_loss_" + name: float(loss.loss.detach().cpu().numpy())
-                        for name, loss in losses_dict.items()
+                        "train_loss_" + name: float(loss.loss.detach().cpu().numpy()) for name, loss in
+                        ctx_losses_dict.items()
                     }
-                    print(
-                        "step %i, loss: %f, took: %.3fs"
-                        % (step_idx, total_loss.detach().cpu().numpy(), time.time() - step_time_start),
-                        file=log.v4,
+                    inv_norm_dict = {
+                        "train_loss_" + name:
+                        # in case we have no inv norm factor we use 1 to normalize via the step count
+                            float(
+                                loss.inv_norm_factor.detach().cpu().numpy()) if loss.inv_norm_factor is not None else 1
+                        for name, loss in ctx_losses_dict.items()
+                    }
+                    accumulated_losses_dict += NumbersDict(losses_dict)
+                    accumulated_inv_norm_dict += NumbersDict(inv_norm_dict)
+                    self.print_step_info(
+                        f"eval {dataset_name} epoch {self.epoch}", step_idx, step_start_time=step_time_start,
+                        total_loss=float(total_loss.detach().cpu().numpy()),
+                        loss_dict=accumulated_losses_dict / accumulated_inv_norm_dict
                     )
                     accumulated_loss += total_loss
                     accumulated_losses_dict += NumbersDict(losses_dict)
                     step_idx += 1
 
             assert step_idx > 0, "No data in dataset '{}'.".format(dataset_name)
-            accumulated_loss = accumulated_loss / step_idx
-            accumulated_losses_dict = accumulated_losses_dict / step_idx
+            accumulated_losses_dict = accumulated_losses_dict / accumulated_inv_norm_dict
 
             self.learning_rate_control.set_epoch_error(self.epoch, dict(accumulated_losses_dict))
 
@@ -253,7 +269,7 @@ class Engine(EngineBase):
             except ImportError:
                 raise ModuleNotFoundError("Possible type error in DataLoader2 due to missing module 'dill'") from exc
 
-    def run_train_step(self, data: dict[str, torch.Tensor], run_ctx: RunCtx) -> Tuple[Tensor, Dict[str, Tensor]]:
+    def run_train_step(self, data: dict[str, torch.Tensor], run_ctx: RunCtx) -> Tuple[Tensor, Dict[str, Loss]]:
         """
         :param data: model inputs for the step
         :param run_ctx: the current run ctx object
@@ -277,7 +293,7 @@ class Engine(EngineBase):
 
         return total_loss, losses_dict
 
-    def run_eval_step(self, data: dict[str, torch.Tensor], run_ctx: RunCtx) -> Tuple[Tensor, Dict[str, Tensor]]:
+    def run_eval_step(self, data: dict[str, torch.Tensor], run_ctx: RunCtx) -> Tuple[Tensor, Dict[str, Loss]]:
         """
         :param data: model inputs for the step
         :param run_ctx: the current run ctx object
@@ -418,3 +434,19 @@ class Engine(EngineBase):
             filename = self.get_epoch_model_filename(epoch=clean_epoch) + ".opt.pt"
             if os.path.isfile(filename):
                 os.unlink(filename)
+
+    @staticmethod
+    def print_step_info(report_prefix: str, step: int, step_start_time: float, total_loss: float, loss_dict: NumbersDict):
+        """
+
+        :param report_prefix:
+        :param step:
+        :param step_start_time:
+        :param total_loss:
+        :param loss_dict:
+        """
+        if log.verbose[5]:
+            info = [report_prefix, "step %i" % step, "took: %.3f" % (time.time() - step_start_time)]
+            info += ["total (grad) loss: %f" % total_loss]
+            info += ["%s: %.5f" % (k, v) for k, v in sorted(loss_dict.items())]
+            print(", ".join(filter(None, info)), file=log.v5)

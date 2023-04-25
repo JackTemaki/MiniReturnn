@@ -9,6 +9,8 @@ or forwarding loop.
 from __future__ import annotations
 from typing import Optional, Union, Dict
 from dataclasses import dataclass
+
+import torch
 from torch import Tensor
 
 
@@ -74,7 +76,7 @@ class RunCtx:
         """
         self.device = device
         self.stage = stage
-        self.losses = {}  # type: Dict[str, Loss]
+        self.losses: Dict[str, Loss] = {}
 
     def init_step(self):
         """ """
@@ -86,6 +88,7 @@ class RunCtx:
         name: str,
         *,
         scale: float = 1.0,
+        inv_norm_factor: Optional[Tensor] = None
     ) -> None:
         """
         Mark the given loss tensor as a loss.
@@ -93,6 +96,7 @@ class RunCtx:
         :param loss: scalar loss
         :param name: name of the loss. this name is used for reporting by RETURNN, and also for LR scheduling.
         :param scale: scale the loss by this factor for the training optimizer
+        :param inv_norm_factor: scalar norm factor, e.g. number of frames in the batch
         """
         assert self.stage == "train_step"
         assert name not in self.losses
@@ -100,19 +104,20 @@ class RunCtx:
             loss=loss,
             name=name,
             scale=scale,
+            inv_norm_factor=inv_norm_factor,
         )
 
-    def total_loss(self) -> Union[Tensor, float]:
+    def total_loss(self) -> Union[Tensor]:
         """
         :return: total loss, as it is used for backpropagation
         """
         assert self.stage == "train_step"
         assert self.losses, "call RunCtx.mark_as_loss(...)"
-        loss = 0.0
+        loss = torch.zeros((), device=self.device)
         for name, loss_obj in self.losses.items():
             if loss_obj.scale == 0.0:
                 continue
-            loss += loss_obj.loss * loss_obj.scale
+            loss += loss_obj.loss * loss_obj.scale / (loss_obj.inv_norm_factor or 1)
         return loss
 
 
@@ -128,3 +133,4 @@ class Loss:
     name: str
 
     scale: float = 1.0
+    inv_norm_factor: Optional[Tensor] = None
