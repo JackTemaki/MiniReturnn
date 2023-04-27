@@ -175,6 +175,7 @@ class Engine(EngineBase):
             self._save_optimizer()
 
         self.eval_model()
+        self.cleanup_old_models(ask_for_confirmation=False)
 
     def eval_model(self):
         """
@@ -434,6 +435,21 @@ class Engine(EngineBase):
             filename = self.get_epoch_model_filename(epoch=clean_epoch) + ".opt.pt"
             if os.path.isfile(filename):
                 os.unlink(filename)
+
+    @staticmethod
+    def delete_model(filename):
+        """
+        :param str filename:
+        :return: accumulated file-size in bytes of deleted files
+        :rtype: int
+        """
+        count_bytes = 0
+        fn = filename + ".pt"
+        assert os.path.exists(filename + fn)
+        count_bytes += os.stat(fn).st_size
+        os.remove(fn)
+        assert count_bytes > 0
+        return count_bytes
 
     @staticmethod
     def print_step_info(report_prefix: str, step: int, step_start_time: float, total_loss: float, loss_dict: NumbersDict):
