@@ -146,21 +146,21 @@ class Engine(EngineBase):
 
             total_loss, ctx_losses_dict = self.run_train_step(data, run_ctx)
 
-            losses_dict = {
+            losses_dict = NumbersDict({
                 "train_loss_" + name: float(loss.loss.detach().cpu().numpy()) for name, loss in ctx_losses_dict.items()
-            }
-            inv_norm_dict = {
+            })
+            inv_norm_dict = NumbersDict({
                 "train_loss_" + name:
                 # in case we have no inv norm factor we use 1 to normalize via the step count
                 float(loss.inv_norm_factor.detach().cpu().numpy()) if loss.inv_norm_factor is not None else 1
                 for name, loss in ctx_losses_dict.items()
-            }
-            accumulated_losses_dict += NumbersDict(losses_dict)
-            accumulated_inv_norm_dict += NumbersDict(inv_norm_dict)
+            })
+            accumulated_losses_dict += losses_dict
+            accumulated_inv_norm_dict += inv_norm_dict
             self.print_step_info(
                 f"train epoch {self.epoch}", step_idx, step_start_time=step_time_start,
                 total_loss=float(total_loss.detach().cpu().numpy()),
-                loss_dict=accumulated_losses_dict / accumulated_inv_norm_dict
+                loss_dict=losses_dict / inv_norm_dict
             )
             step_idx += 1
 
@@ -203,23 +203,23 @@ class Engine(EngineBase):
 
                     total_loss, ctx_losses_dict = self.run_eval_step(data, run_ctx)
 
-                    losses_dict = {
+                    losses_dict = NumbersDict({
                         "train_loss_" + name: float(loss.loss.detach().cpu().numpy()) for name, loss in
                         ctx_losses_dict.items()
-                    }
-                    inv_norm_dict = {
+                    })
+                    inv_norm_dict = NumbersDict({
                         "train_loss_" + name:
                         # in case we have no inv norm factor we use 1 to normalize via the step count
                             float(
                                 loss.inv_norm_factor.detach().cpu().numpy()) if loss.inv_norm_factor is not None else 1
                         for name, loss in ctx_losses_dict.items()
-                    }
-                    accumulated_losses_dict += NumbersDict(losses_dict)
-                    accumulated_inv_norm_dict += NumbersDict(inv_norm_dict)
+                    })
+                    accumulated_losses_dict += losses_dict
+                    accumulated_inv_norm_dict += inv_norm_dict
                     self.print_step_info(
                         f"eval {dataset_name} epoch {self.epoch}", step_idx, step_start_time=step_time_start,
                         total_loss=float(total_loss.detach().cpu().numpy()),
-                        loss_dict=accumulated_losses_dict / accumulated_inv_norm_dict
+                        loss_dict=losses_dict / inv_norm_dict
                     )
                     accumulated_loss += total_loss
                     accumulated_losses_dict += NumbersDict(losses_dict)
