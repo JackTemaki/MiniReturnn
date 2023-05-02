@@ -105,7 +105,6 @@ class Dataset(object):
         self._estimated_num_seqs = estimated_num_seqs
         self.shuffle_frames_of_nseqs = shuffle_frames_of_nseqs
         self.epoch = None
-        self.zpad = None
 
     def __repr__(self):
         return "<%s %r epoch=%s>" % (
@@ -144,7 +143,7 @@ class Dataset(object):
                     else:
                         kwargs[arg] = getattr(self, arg)
 
-        state = {attr: getattr(self, attr) for attr in ["epoch", "zpad"]}
+        state = {attr: getattr(self, attr) for attr in ["epoch"]}
         return Dataset._create_from_reduce, (self.__class__, kwargs, state)
 
     @staticmethod
@@ -513,20 +512,12 @@ class Dataset(object):
         """
         raise OptionalNotImplementedError
 
-    def _base_init(self):
-        self.zpad = None
-        # We expect that the following attributes are already set elsewhere, by a derived class.
-        assert self.num_outputs
-        if not self.num_inputs:
-            assert "data" in self.num_outputs
-        assert self.num_inputs > 0
-
     def initialize(self):
         """
         Does the main initialization before it can be used.
         This needs to be called before self.load_seqs() can be used.
         """
-        self._base_init()
+        assert self.num_outputs
         self.init_seq_order()
 
     def get_times(self, sorted_seq_idx):

@@ -199,7 +199,6 @@ class MetaDataset(CachedDataset2):
         seq_lens_file=None,
         data_dims=None,
         data_dtypes=None,  # noqa  # not used
-        window=1,
         **kwargs,
     ):
         """
@@ -220,7 +219,6 @@ class MetaDataset(CachedDataset2):
            Deprecated/Only to double check. Read from data if not specified.
         :param dict[str,str] data_dtypes: self-data-key -> dtype. Read from data if not specified.
         """
-        assert window == 1  # not implemented
         super(MetaDataset, self).__init__(**kwargs)
         assert self.shuffle_frames_of_nseqs == 0  # not implemented. anyway only for non-recurrent nets
 
