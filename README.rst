@@ -7,3 +7,21 @@ No network helper functions are provided, all model logic has to be explicitly d
 This is repository is intended to be a quick playground for custom experiments, for everything serious please use `RETURNN <https://github.com/rwth-i6/returnn>`__.
 
 General config-compatibility to RETURNN is kept, but technical details differ.
+
+
+Removed features:
+ - Anything related to the Tensorflow backend (also tools and tests)
+ - Anything related to the Frontend API
+ - Window/Chunking/Batching logic WITHIN DATSETS (Batching and Chunking exists in the new PyTorch datapipeline)
+ - Some older Datasets that depended on removed features (no relevant Dataset should be missing)
+ - Most utility code that was only used by Tensorflow code
+
+
+Changed behavior
+ - The data to the actual step function in the config is passed as PyTorch tensor dict instead of Frontend Tensors
+   - Axis information is automatically added as <data_name>:axis<idx> entry starting from 0 = batch axis
+ - The Loss class has less parameters, e.g. `use_normalization` does not exist, and the behavior is always true.
+   -  Also determining the inverse norm factor automatically is not possible, it has to be provided explictly
+ - The Engine API is regarding step functions is structured slightly differently
+ - Step-logging is slightly differently
+ - Overriding the Engine by declaring a `CustomEngine` in the config is possible, see https://github.com/rwth-i6/returnn/pull/1306 for a discussion on this.
