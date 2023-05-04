@@ -448,7 +448,10 @@ class OggZipDataset(CachedDataset2):
         orth = numpy.array(orth, dtype="uint8")
         return DatasetSeq(
             features=features,
-            targets={"classes": targets, "raw": raw_txt, "orth": orth},
+            # TODO: temporarily disable raw and orth which causes
+            #       issues with the PyTorch data pipeline
+            # targets={"classes": targets, "raw": raw_txt, "orth": orth},
+            targets={"classes": targets},
             seq_idx=corpus_seq_idx,
             seq_tag=seq_tag,
         )
