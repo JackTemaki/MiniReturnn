@@ -147,12 +147,11 @@ class Engine(EngineBase):
             total_loss, ctx_losses_dict = self.run_train_step(data, run_ctx)
 
             losses_dict = NumbersDict({
-                "train_loss_" + name: float(loss.loss.detach().cpu().numpy()) for name, loss in ctx_losses_dict.items()
+                name: float(loss.loss.detach().cpu().numpy()) for name, loss in ctx_losses_dict.items()
             })
             inv_norm_dict = NumbersDict({
-                "train_loss_" + name:
                 # in case we have no inv norm factor we use 1 to normalize via the step count
-                float(loss.inv_norm_factor.detach().cpu().numpy()) if loss.inv_norm_factor is not None else 1
+                name: float(loss.inv_norm_factor.detach().cpu().numpy()) if loss.inv_norm_factor is not None else 1
                 for name, loss in ctx_losses_dict.items()
             })
             accumulated_losses_dict += losses_dict
@@ -204,14 +203,13 @@ class Engine(EngineBase):
                     total_loss, ctx_losses_dict = self.run_eval_step(data, run_ctx)
 
                     losses_dict = NumbersDict({
-                        "train_loss_" + name: float(loss.loss.detach().cpu().numpy()) for name, loss in
+                        name: float(loss.loss.detach().cpu().numpy()) for name, loss in
                         ctx_losses_dict.items()
                     })
                     inv_norm_dict = NumbersDict({
-                        "train_loss_" + name:
                         # in case we have no inv norm factor we use 1 to normalize via the step count
-                            float(
-                                loss.inv_norm_factor.detach().cpu().numpy()) if loss.inv_norm_factor is not None else 1
+                        name: float(
+                            loss.inv_norm_factor.detach().cpu().numpy()) if loss.inv_norm_factor is not None else 1
                         for name, loss in ctx_losses_dict.items()
                     })
                     accumulated_losses_dict += losses_dict
@@ -221,23 +219,22 @@ class Engine(EngineBase):
                         total_loss=float(total_loss.detach().cpu().numpy()),
                         loss_dict=losses_dict / inv_norm_dict
                     )
-                    accumulated_loss += total_loss
-                    accumulated_losses_dict += NumbersDict(losses_dict)
                     step_idx += 1
 
             assert step_idx > 0, "No data in dataset '{}'.".format(dataset_name)
             accumulated_losses_dict = accumulated_losses_dict / accumulated_inv_norm_dict
 
-            self.learning_rate_control.set_epoch_error(self.epoch, dict(accumulated_losses_dict))
+            self.learning_rate_control.set_epoch_error(
+                self.epoch, {f"{dataset_name}_loss_{k}": v for k, v in accumulated_losses_dict.items()}
+            )
+            self.learning_rate_control.save()
 
             print(
-                "Total loss for '{}': {:.6}, took: %.3f".format(
-                    dataset_name, accumulated_loss, time.time() - dataset_start_time
-                ),
+                "Finished evaluating {} in {:.3}s".format(dataset_name, time.time() - dataset_start_time),
                 file=log.v3,
             )
 
-        self.learning_rate_control.save()
+
 
     def _create_data_loader(self, dataset: Dataset) -> DataLoader2:
         """
@@ -451,8 +448,7 @@ class Engine(EngineBase):
         assert count_bytes > 0
         return count_bytes
 
-    @staticmethod
-    def print_step_info(report_prefix: str, step: int, step_start_time: float, total_loss: float, loss_dict: NumbersDict):
+    def print_step_info(self, report_prefix: str, step: int, step_start_time: float, total_loss: float, loss_dict: NumbersDict):
         """
 
         :param report_prefix:
@@ -463,6 +459,17 @@ class Engine(EngineBase):
         """
         if log.verbose[5]:
             info = [report_prefix, "step %i" % step, "took: %.3f" % (time.time() - step_start_time)]
+            if hasattr(self, "time_since_last_step"):
+                info += ["step time: %.3f" % (time.time() - self.time_since_last_step)]
             info += ["total (grad) loss: %f" % total_loss]
-            info += ["%s: %.5f" % (k, v) for k, v in sorted(loss_dict.items())]
-            print(", ".join(filter(None, info)), file=log.v5)
+            info += [self.format_loss_dict(loss_dict)]
+            info = ", ".join(filter(None, info))
+            print(info, file=log.v5)
+            self.time_since_last_step = time.time()
+
+    @staticmethod
+    def format_loss_dict(loss_dict: NumbersDict):
+        """
+        :param loss_dict: the loss dict from train/eval
+        """
+        return ", ".join(["%s: %.5f" % (k, v) for k, v in sorted(loss_dict.items())])
