@@ -15,6 +15,7 @@ Removed features:
  - Window/Chunking/Batching logic WITHIN DATSETS (Batching and Chunking exists in the new PyTorch datapipeline)
  - Some older Datasets that depended on removed features (no relevant Dataset should be missing)
  - Most utility code that was only used by Tensorflow code
+ - There is no default keep-pattern of checkpoints, `keep` has to specified within the `cleanup_old_models` config dict explicitely
 
 
 Changed behavior

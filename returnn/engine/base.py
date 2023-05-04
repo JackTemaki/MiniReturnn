@@ -189,30 +189,7 @@ class EngineBase(object):
             )
             return
         keep_epochs = set()  # type: typing.Set[int]
-        default_keep_pattern = set()
-        if epochs[-1] <= 10:
-            keep_every = 4
-            keep_doubles_of = 5
-        elif epochs[-1] <= 50:
-            keep_every = 20
-            keep_doubles_of = 5
-        elif epochs[-1] <= 100:
-            keep_every = 40
-            keep_doubles_of = 10
-        else:
-            keep_every = 80
-            keep_doubles_of = 20
-        for i in count(1):
-            n = keep_every * i
-            if n > epochs[-1]:
-                break
-            default_keep_pattern.add(n)
-        for i in count():
-            n = keep_doubles_of * (2**i)
-            if n > epochs[-1]:
-                break
-            default_keep_pattern.add(n)
-        keep_epochs.update(opts.get("keep", default_keep_pattern))
+        keep_epochs.update(opts.get("keep", set()))
         keep_epochs.update(epochs[-keep_last_n:])
         score_keys = set()  # e.g. "dev_error", "dev_score", etc.
         # Collect all possible score keys. Note that we could have different ones for different epochs.
