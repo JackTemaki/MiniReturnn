@@ -25,3 +25,5 @@ Changed behavior
  - The Engine API is regarding step functions is structured slightly differently
  - Step-logging is slightly differently
  - Overriding the Engine by declaring a `CustomEngine` in the config is possible, see https://github.com/rwth-i6/returnn/pull/1306 for a discussion on this.
+ - `weight_decay` is applied to ALL parameters without exception.
+ - Always uses the cache-manager if available, even when not running in cluster
