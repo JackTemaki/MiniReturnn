@@ -1,33 +1,22 @@
-#!/usr/bin/env python3
-
 """
-Main entry point
-================
+Main task definitions of RETURNN.
+
+Also keeps track of some global variables (TODO: this can maybe be solved differently)
 
 This is the main entry point, providing :func:`main`.
 See :func:`init_config` for some arguments, or just run ``./rnn.py --help``.
-See :ref:`tech_overview` for a technical overview.
 """
 
 from __future__ import annotations
-
-__author__ = "Patrick Doetsch"
-__copyright__ = "Copyright 2014"
-__credits__ = ["Patrick Doetsch", "Paul Voigtlaender"]
-__license__ = "RWTHOCR"
-__maintainer__ = "Patrick Doetsch"
-__email__ = "doetsch@i6.informatik.rwth-aachen.de"
 
 
 import os
 import sys
 import time
 import typing
-import numpy
-import returnn
 from returnn.log import log
 from returnn.config import Config
-from returnn.datasets import Dataset, init_dataset, init_dataset_via_str
+from returnn.datasets import Dataset, init_dataset
 from returnn.datasets.hdf import HDFDataset
 from returnn.util import debug as debug_util
 from returnn.util import basic as util
@@ -40,11 +29,8 @@ from returnn.util.debug import init_ipython_kernel, init_better_exchook, init_fa
 # noinspection PyUnresolvedReferences
 from returnn.util.basic import init_thread_join_hack, describe_returnn_version
 
-if typing.TYPE_CHECKING:
-    import returnn.tf.engine
-
 config = None  # type: typing.Optional[Config]
-engine = None  # type: typing.Optional[typing.Union[returnn.tf.engine.Engine]]
+engine = None  # type: typing.Optional[EngineBase]
 train_data = None  # type: typing.Optional[Dataset]
 dev_data = None  # type: typing.Optional[Dataset]
 eval_data = None  # type: typing.Optional[Dataset]
@@ -129,7 +115,6 @@ def init_log():
 def load_data(config, files_config_key, **kwargs):
     """
     :param Config config:
-    :param int cache_byte_size:
     :param str files_config_key: such as "train" or "dev"
     :param kwargs: passed on to init_dataset() or init_dataset_via_str()
     :rtype: (Dataset,int)
@@ -147,8 +132,9 @@ def load_data(config, files_config_key, **kwargs):
     elif config.is_typed(files_config_key) and callable(config.typed_value(files_config_key)):
         data = init_dataset(config.typed_value(files_config_key), default_kwargs=kwargs)
     else:
-        config_str = config.value(files_config_key, "")
-        data = init_dataset_via_str(config_str, config=config, **kwargs)
+        raise ValueError(
+            "A dataset has to be defined as dict or callable, but found %s" % type(config.typed_value(files_config_key))
+        )
     cache_leftover = 0
     if isinstance(data, HDFDataset):
         cache_leftover = data.definite_cache_leftover
@@ -258,11 +244,9 @@ def init(config_filename=None, command_line_options=(), config_updates=None, ext
     init_engine()
 
 
-def finalize(error_occurred=False):
+def finalize():
     """
-    Cleanup at the end.
-
-    :param bool error_occurred:
+    Cleanup at the end, currently doing nothing
     """
     print("Quitting", file=getattr(log, "v4", sys.stderr))
     global quit_returnn
@@ -297,72 +281,64 @@ def execute_main_task():
         assert (
             train_data and train_data.have_seqs()
         ), "no train files specified, check 'train' option: %s" % config.value("train", None)
-        engine.init_train_from_config(config, train_data, dev_data, eval_data)
+        engine.init_train(train_data, dev_data, eval_data)
         engine.train()
     elif task == "eval":
-        if config.value("load", None):
-            # this would directly load whatever model is specified
-            print("Evaluate model", config.value("load", None), file=log.v2)
-            lr_control_update_scores = False
-        else:
-            # Assume the configured model with some given epoch.
-            epoch = config.int("epoch", -1)
-            load_epoch = config.int("load_epoch", -1)
-            if epoch >= 0:
-                assert (load_epoch < 0) or (load_epoch == epoch), "epoch and load_epoch have to match"
-                engine.epoch = epoch
-                config.set("load_epoch", engine.epoch)
-            else:
-                assert load_epoch >= 0, "specify epoch or load_epoch"
-                engine.epoch = load_epoch
-            print("Evaluate epoch", engine.epoch, file=log.v2)
-            lr_control_update_scores = True
-        engine.init_train_from_config(config, train_data, dev_data, eval_data)
-        engine.eval_model(
-            output_file=config.value("eval_output_file", None),
-            output_per_seq_file=config.value("eval_output_file_per_seq", None),
-            loss_name=config.value("loss_name", None),
-            output_per_seq_format=config.list("output_per_seq_format", ["score"]),
-            output_per_seq_file_format=config.value("output_per_seq_file_format", "txt"),
-            lr_control_update_scores=lr_control_update_scores,
-        )
+        raise NotImplementedError("eval task is currently not implemented")
+        # if config.value("load", None):
+        #     # this would directly load whatever model is specified
+        #     print("Evaluate model", config.value("load", None), file=log.v2)
+        #     lr_control_update_scores = False
+        # else:
+        #     # Assume the configured model with some given epoch.
+        #     epoch = config.int("epoch", -1)
+        #     load_epoch = config.int("load_epoch", -1)
+        #     if epoch >= 0:
+        #         assert (load_epoch < 0) or (load_epoch == epoch), "epoch and load_epoch have to match"
+        #         engine.epoch = epoch
+        #         config.set("load_epoch", engine.epoch)
+        #     else:
+        #         assert load_epoch >= 0, "specify epoch or load_epoch"
+        #         engine.epoch = load_epoch
+        #     print("Evaluate epoch", engine.epoch, file=log.v2)
+        #     lr_control_update_scores = True
+        # engine.init_train_from_config(config, train_data, dev_data, eval_data)
+        # engine.eval_model(
+        #     output_file=config.value("eval_output_file", None),
+        #     output_per_seq_file=config.value("eval_output_file_per_seq", None),
+        #     loss_name=config.value("loss_name", None),
+        #     output_per_seq_format=config.list("output_per_seq_format", ["score"]),
+        #     output_per_seq_file_format=config.value("output_per_seq_file_format", "txt"),
+        #     lr_control_update_scores=lr_control_update_scores,
+        # )
     elif task in ["forward"]:
         assert eval_data is not None, "no eval data provided"
-        combine_labels = config.value("combine_labels", "")
-        engine.use_search_flag = config.bool("forward_use_search", False)
         if config.has("epoch"):
             config.set("load_epoch", config.int("epoch", 0))
-        engine.init_network_from_config(config)
-        output_file = config.value("output_file", "dump-fwd-epoch-%i.hdf" % engine.epoch)
-        forward_batch_size = config.int("forward_batch_size", 0)
-        if not forward_batch_size:
-            raise Exception("forward_batch_size not set")
-        engine.forward_to_hdf(
-            data=eval_data,
-            output_file=output_file,
-            combine_labels=combine_labels,
-            batch_size=forward_batch_size,
-        )
+            engine.init_forward(eval_data=eval_data)
+        engine.forward()
     elif task == "search":
-        engine.use_search_flag = True
-        engine.use_eval_flag = config.bool("search_do_eval", True)
-        engine.init_network_from_config(config)
-        if config.value("search_data", "eval") in ["train", "dev", "eval"]:
-            data = {"train": train_data, "dev": dev_data, "eval": eval_data}[config.value("search_data", "eval")]
-            assert data, "set search_data"
-        else:
-            data = init_dataset(config.opt_typed_value("search_data"))
-        engine.search(
-            data,
-            do_eval=config.bool("search_do_eval", True),
-            output_layer_names=config.typed_value("search_output_layer", "output"),
-            output_file=config.value("search_output_file", ""),
-            output_file_format=config.value("search_output_file_format", "txt"),
-        )
+        raise NotImplementedError("search task is currently not implemented")
+        # engine.use_search_flag = True
+        # engine.use_eval_flag = config.bool("search_do_eval", True)
+        # engine.init_network_from_config(config)
+        # if config.value("search_data", "eval") in ["train", "dev", "eval"]:
+        #     data = {"train": train_data, "dev": dev_data, "eval": eval_data}[config.value("search_data", "eval")]
+        #     assert data, "set search_data"
+        # else:
+        #     data = init_dataset(config.opt_typed_value("search_data"))
+        # engine.search(
+        #     data,
+        #     do_eval=config.bool("search_do_eval", True),
+        #     output_layer_names=config.typed_value("search_output_layer", "output"),
+        #     output_file=config.value("search_output_file", ""),
+        #     output_file_format=config.value("search_output_file_format", "txt"),
+        # )
     elif task == "compute_priors":
-        assert train_data is not None, "train data for priors should be provided"
-        engine.init_network_from_config(config)
-        engine.compute_priors(dataset=train_data, config=config)
+        raise NotImplementedError("compute_priors task is currently not implemented")
+        # assert train_data is not None, "train data for priors should be provided"
+        # engine.init_network_from_config(config)
+        # engine.compute_priors(dataset=train_data, config=config)
     elif task == "cleanup_old_models":
         engine.cleanup_old_models(ask_for_confirmation=True)
     elif task.startswith("config:"):
@@ -381,8 +357,8 @@ def execute_main_task():
     elif task == "nop":
         print("Task: No-operation", file=log.v1)
     elif task == "initialize_model":
-        engine.init_train_from_config(config, train_data, dev_data, eval_data)
-        engine.save_model(config.value("model", "dummy"))
+        engine.init_train(train_data, dev_data, eval_data)
+        engine.save_model()
     else:
         raise Exception("unknown task: %r" % (task,))
 
@@ -407,7 +383,7 @@ def main(argv=None):
         print("KeyboardInterrupt", file=getattr(log, "v3", sys.stderr))
         if getattr(log, "verbose", [False] * 6)[5]:
             sys.excepthook(*sys.exc_info())
-    finalize(error_occurred=return_code != 0)
+    finalize()
     if return_code:
         sys.exit(return_code)
 
