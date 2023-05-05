@@ -36,7 +36,7 @@ class HDFDataset(CachedDataset):
         assert (
             self.partition_epoch == 1 or self.cache_byte_size_total_limit == 0
         ), "To use partition_epoch in HDFDatasets, disable caching by setting cache_byte_size=0"
-        if files is not None or not isinstance(files, list):
+        if files is not None and not isinstance(files, list):
             raise TypeError("HDFDataset 'files' have to be defined as a list")
         self._use_cache_manager = use_cache_manager
         self.files = []  # type: typing.List[str]  # file names
