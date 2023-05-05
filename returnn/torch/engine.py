@@ -16,7 +16,7 @@ from random import random
 from returnn.config import Config
 from returnn.log import log
 from returnn.engine.base import EngineBase
-from returnn.datasets.basic import init_dataset, Dataset
+from returnn.datasets.basic import Dataset
 from returnn.util import NumbersDict
 from .updater import Updater
 from .data import pipeline as data_pipeline
@@ -39,8 +39,6 @@ class Engine(EngineBase):
         self.model_filename = self.config.value("model", None)
         self._mp_manager = torch.multiprocessing.Manager()
         self._epoch_mp_shared = self._mp_manager.Value("i", 0)
-        self.train_dataset = None  # type: Optional[Dataset]
-        self.eval_datasets = {}
         self._train_dataloader = None  # type: Optional[DataLoader2]
         self._eval_dataloaders = {}  # type: Dict[str, DataLoader2]
 
@@ -49,36 +47,25 @@ class Engine(EngineBase):
         self._model = None  # type: Optional[torch.nn.Module]
         self._train_step = 0
         self._train_step_func = None  # type: Optional[Callable]
+        self._forward_step_func = None  # type: Optional[Callable]
         self._save_model_epoch_interval = 1
         self._updater = None  # type: Optional[Updater]
 
         self._device = "cuda" if torch.cuda.is_available() and torch.cuda.device_count() > 0 else "cpu"
         print(f"Using device {self._device}", file=log.v3)
 
-    def init_train_from_config(
+    def init_train(
         self,
-        config: Optional[Config] = None,
         train_data: Optional[Dataset] = None,
         dev_data: Optional[Dataset] = None,
         eval_data: Optional[Dataset] = None,
     ):
         """
-        :param config:
         :param train_data:
         :param dev_data:
         :param eval_data:
         """
-        assert config is self.config
-        super().init_train_from_config(config=config)
-        self.train_dataset = train_data
-        self.eval_datasets.clear()
-        if dev_data:
-            self.eval_datasets["dev"] = dev_data
-        if eval_data:
-            self.eval_datasets["eval"] = eval_data
-        if config.has("eval_datasets"):
-            for dataset_name, dataset_opts in config.typed_value("eval_datasets", {}).items():
-                self.eval_datasets[dataset_name] = init_dataset(dataset_opts, default_kwargs={"name": dataset_name})
+        super().init_train(train_data=train_data, dev_data=dev_data, eval_data=eval_data)
 
         self._train_dataloader = self._create_data_loader(train_data) if train_data else None
         for dataset_name, dataset in self.eval_datasets.items():
@@ -88,15 +75,34 @@ class Engine(EngineBase):
         self._final_epoch = self.config_get_final_epoch(self.config)
 
         self._load_model(epoch=self._start_epoch)
-        self._save_model_epoch_interval = config.int("save_interval", 1)
+        self._save_model_epoch_interval = self.config.int("save_interval", 1)
 
         self._updater = Updater(self.config, self._model, self.learning_rate)
         self._updater.create_optimizer()
         if self._start_epoch > 1:
             self._load_optimizer(self._start_epoch)
 
-        self._train_step_func = self.config.typed_value("train_step")
-        assert self._train_step_func, "train_step not defined"
+    def init_forward(
+        self,
+        eval_data: Optional[Dataset] = None,
+    ):
+        """
+        :param eval_data:
+        """
+
+        super().init_forward(eval_data=eval_data)
+        for dataset_name, dataset in self.eval_datasets.items():
+            self._eval_dataloaders[dataset_name] = self._create_data_loader(dataset)
+
+        self._start_epoch = self.get_train_start_epoch(self.config)
+
+        # for now assume we only do forward within one epoch setting
+        self._final_epoch = self._start_epoch
+
+        self._load_model(epoch=self._start_epoch)
+
+        self._forward_step_func = self.config.typed_value("forward_step")
+        assert self._forward_step_func, "forward_step not defined"
 
     def train(self):
         """
@@ -176,7 +182,7 @@ class Engine(EngineBase):
         self.learning_rate_control.save()
 
         if self.epoch % self._save_model_epoch_interval == 0 or self.epoch == self._final_epoch:
-            self._save_model()
+            self.save_model()
             self._save_optimizer()
 
         self.eval_model()
@@ -195,7 +201,6 @@ class Engine(EngineBase):
 
             data_loader = self._eval_dataloaders[dataset_name]
 
-            accumulated_loss = 0.0
             accumulated_losses_dict = NumbersDict()
             accumulated_inv_norm_dict = NumbersDict()
             step_idx = 0
@@ -241,6 +246,43 @@ class Engine(EngineBase):
 
             print(
                 "Finished evaluating {} in {:.3}s".format(dataset_name, time.time() - dataset_start_time),
+                file=log.v3,
+            )
+
+    def forward(self):
+        """
+        Runs the model
+        """
+        self._model.eval()
+        init_forward_step_run_ctx(device=self._device)
+
+        for dataset_name, dataset in self.eval_datasets.items():
+            dataset_start_time = time.time()
+            print(f"Forwarding dataset {dataset_name!r}'", file=log.v3)
+
+            data_loader = self._eval_dataloaders[dataset_name]
+
+            step_idx = 0
+
+            with torch.no_grad():
+                for data in data_loader:
+                    step_time_start = time.time()
+                    run_ctx = get_run_ctx()
+                    run_ctx.init_step()
+
+                    self.run_forward_step(data, run_ctx)
+
+                    self.print_step_info(
+                        f"forward {dataset_name} epoch {self.epoch}",
+                        step_idx,
+                        step_start_time=step_time_start,
+                    )
+                    step_idx += 1
+
+            assert step_idx > 0, "No data in dataset '{}'.".format(dataset_name)
+
+            print(
+                "Finished forwarding {} in {:.3}s".format(dataset_name, time.time() - dataset_start_time),
                 file=log.v3,
             )
 
@@ -321,6 +363,22 @@ class Engine(EngineBase):
         total_loss = run_ctx.total_loss()
 
         return total_loss, losses_dict
+
+    def run_forward_step(self, data: dict[str, torch.Tensor], run_ctx: RunCtx):
+        """
+        :param data: model inputs for the step
+        :param run_ctx: the current run ctx object
+        """
+        assert isinstance(data, dict) and data
+        # move all data to the target device as default
+        # note that in some cases, e.g. for using rnn.pack_padded_sequence you need to have
+        # length tensors on CPU
+        data = {k: v.to(self._device) for (k, v) in data.items()}
+
+        sentinel_kw = {"__fwd_compatible_random_arg_%i" % int(random() * 100): None}
+        # currently we only support the _train_step_func,
+        # this can be an optional _eval_step_func later on
+        self._forward_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
 
     def _load_model(self, *, epoch: int):
         """
@@ -410,7 +468,7 @@ class Engine(EngineBase):
 
         self._model.to(self._device)
 
-    def _save_model(self):
+    def save_model(self):
         """
         Saves the state of self._model to file.
         """
@@ -467,7 +525,12 @@ class Engine(EngineBase):
         return count_bytes
 
     def print_step_info(
-        self, report_prefix: str, step: int, step_start_time: float, total_loss: float, loss_dict: NumbersDict
+        self,
+        report_prefix: str,
+        step: int,
+        step_start_time: float,
+        total_loss: Optional[float] = None,
+        loss_dict: Optional[NumbersDict] = None,
     ):
         """
 
@@ -481,8 +544,10 @@ class Engine(EngineBase):
             info = [report_prefix, "step %i" % step, "took: %.3f" % (time.time() - step_start_time)]
             if hasattr(self, "time_since_last_step"):
                 info += ["step time: %.3f" % (time.time() - self.time_since_last_step)]
-            info += ["total (grad) loss: %f" % total_loss]
-            info += [self.format_loss_dict(loss_dict)]
+            if total_loss is not None:
+                info += ["total (grad) loss: %f" % total_loss]
+            if loss_dict is not None:
+                info += [self.format_loss_dict(loss_dict)]
             info = ", ".join(filter(None, info))
             print(info, file=log.v5)
             self.time_since_last_step = time.time()

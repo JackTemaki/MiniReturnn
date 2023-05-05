@@ -6,9 +6,10 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Optional
+from typing import Dict, Optional
 
 from returnn.config import Config, get_global_config
+from returnn.datasets import Dataset, init_dataset
 from returnn.learning_rate_control import load_learning_rate_control_from_config, LearningRateControl
 from returnn.log import log
 from returnn.util import basic as util
@@ -16,7 +17,15 @@ from returnn.util import basic as util
 
 class EngineBase(object):
     """
-    Base class for a backend engine, such as :class:`TFEngine.Engine`.
+    Base class for a backend engine.
+
+    The purpose of the engine is to provide all necessary functions to train and execute neural models,
+    being initialized by a config objects and provided datasets.
+
+    Manages the following components:
+     - The config
+     - The Returnn datasets for train and eval
+     - The learning rate control system
     """
 
     FILE_POSTFIX = None
@@ -30,17 +39,59 @@ class EngineBase(object):
         self.config = config
         self.epoch = 0
         self.model_filename = None  # type: Optional[str]
+
+        self.train_dataset = None  # type: Optional[Dataset]
+        self.eval_datasets = {}  # type: Dict[str, Dataset]
+
         self.learning_rate = 0.0  # set in init_train_epoch
         self.learning_rate_control = None  # type: Optional[LearningRateControl]
 
-    def init_train_from_config(self, config: Optional[Config] = None):
+    def init_train(
+        self,
+        train_data: Optional[Dataset] = None,
+        dev_data: Optional[Dataset] = None,
+        eval_data: Optional[Dataset] = None,
+    ):
         """
         Initialize all engine parts needed for training
 
-        :param config:
+        :param train_data:
+        :param dev_data:
+        :param eval_data:
         """
-        self.learning_rate_control = load_learning_rate_control_from_config(config)
+        self.train_dataset = train_data
+        self.eval_datasets.clear()
+        if dev_data:
+            self.eval_datasets["dev"] = dev_data
+        if eval_data:
+            self.eval_datasets["eval"] = eval_data
+        if self.config.has("eval_datasets"):
+            for dataset_name, dataset_opts in self.config.typed_value("eval_datasets", {}).items():
+                self.eval_datasets[dataset_name] = init_dataset(dataset_opts, default_kwargs={"name": dataset_name})
+
+        self.learning_rate_control = load_learning_rate_control_from_config(self.config)
         self.learning_rate = self.learning_rate_control.default_learning_rate
+
+    def init_forward(self, eval_data: Optional[Dataset] = None):
+        """
+        Initialize all engine parts needed for training
+
+        :param eval_data:
+        """
+        if eval_data:
+            self.eval_datasets["eval"] = eval_data
+        if self.config.has("eval_datasets"):
+            for dataset_name, dataset_opts in self.config.typed_value("eval_datasets", {}).items():
+                self.eval_datasets[dataset_name] = init_dataset(dataset_opts, default_kwargs={"name": dataset_name})
+
+    def train(self):
+        raise NotImplementedError
+
+    def forward(self):
+        raise NotImplementedError
+
+    def save_model(self):
+        raise NotImplementedError
 
     @classmethod
     def config_get_final_epoch(cls, config):
