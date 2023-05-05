@@ -511,8 +511,8 @@ def test_rnn_initData():
 
     config = Config({
         "cache_size": "0",
-        "train": {"class": "HDFDataset", "files": hdf_fn},
-        "dev": {"class": "HDFDataset", "files": hdf_fn}
+        "train": {"class": "HDFDataset", "files": [hdf_fn]},
+        "dev": {"class": "HDFDataset", "files": [hdf_fn]}
     })
     import returnn.__main__ as rnn
 
