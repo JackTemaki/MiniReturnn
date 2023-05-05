@@ -12,7 +12,6 @@ Configuration Parameters
     :maxdepth: 1
     :titlesonly:
 
-    behavior_version.rst
     general_settings.rst
     training.rst
     optimizer_settings.rst

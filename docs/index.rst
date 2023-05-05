@@ -97,11 +97,7 @@ Some recent development changelog can be seen `here <https://github.com/rwth-i6/
     :caption: User Guide
     :maxdepth: 2
 
-    user_guide/network.rst
     user_guide/dataset.rst
-    user_guide/recurrent_subnet.rst
-    user_guide/extending_returnn.rst
-
 
 .. toctree::
     :hidden:
@@ -112,18 +108,6 @@ Some recent development changelog can be seen `here <https://github.com/rwth-i6/
     dataset_reference/index.rst
     layer_reference/index.rst
     optimizer.rst
-
-.. toctree::
-    :hidden:
-    :caption: Advanced Topics
-    :maxdepth: 2
-
-    advanced/pretraining.rst
-    advanced/multi_gpu.rst
-    advanced/debugging.rst
-    advanced/profiling.rst
-    advanced/deterministic_training.rst
-    advanced/test_suite.rst
 
 .. toctree::
     :hidden:
