@@ -29,8 +29,6 @@ class Dataset(object):
     Base class for any dataset. This defines the dataset API.
     """
 
-
-
     @classmethod
     def from_config(cls, config, **kwargs):
         """

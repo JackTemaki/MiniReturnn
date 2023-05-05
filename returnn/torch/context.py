@@ -83,12 +83,7 @@ class RunCtx:
         self.losses = {}
 
     def mark_as_loss(
-        self,
-        loss: Tensor,
-        name: str,
-        *,
-        scale: float = 1.0,
-        inv_norm_factor: Optional[Tensor] = None
+        self, loss: Tensor, name: str, *, scale: float = 1.0, inv_norm_factor: Optional[Tensor] = None
     ) -> None:
         """
         Mark the given loss tensor as a loss.

@@ -1232,6 +1232,7 @@ class TranslationDataset(CachedDataset2):
         # noinspection PyBroadException
         try:
             import better_exchook
+
             better_exchook.install()
 
             # First iterate once over the data to get the data len as fast as possible.

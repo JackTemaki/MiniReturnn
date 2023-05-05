@@ -147,20 +147,24 @@ class Engine(EngineBase):
 
             total_loss, ctx_losses_dict = self.run_train_step(data, run_ctx)
 
-            losses_dict = NumbersDict({
-                name: float(loss.loss.detach().cpu().numpy()) for name, loss in ctx_losses_dict.items()
-            })
-            inv_norm_dict = NumbersDict({
-                # in case we have no inv norm factor we use 1 to normalize via the step count
-                name: float(loss.inv_norm_factor.detach().cpu().numpy()) if loss.inv_norm_factor is not None else 1
-                for name, loss in ctx_losses_dict.items()
-            })
+            losses_dict = NumbersDict(
+                {name: float(loss.loss.detach().cpu().numpy()) for name, loss in ctx_losses_dict.items()}
+            )
+            inv_norm_dict = NumbersDict(
+                {
+                    # in case we have no inv norm factor we use 1 to normalize via the step count
+                    name: float(loss.inv_norm_factor.detach().cpu().numpy()) if loss.inv_norm_factor is not None else 1
+                    for name, loss in ctx_losses_dict.items()
+                }
+            )
             accumulated_losses_dict += losses_dict
             accumulated_inv_norm_dict += inv_norm_dict
             self.print_step_info(
-                f"train epoch {self.epoch}", step_idx, step_start_time=step_time_start,
+                f"train epoch {self.epoch}",
+                step_idx,
+                step_start_time=step_time_start,
                 total_loss=float(total_loss.detach().cpu().numpy()),
-                loss_dict=losses_dict / inv_norm_dict
+                loss_dict=losses_dict / inv_norm_dict,
             )
             step_idx += 1
             self._train_step += 1
@@ -204,22 +208,26 @@ class Engine(EngineBase):
 
                     total_loss, ctx_losses_dict = self.run_eval_step(data, run_ctx)
 
-                    losses_dict = NumbersDict({
-                        name: float(loss.loss.detach().cpu().numpy()) for name, loss in
-                        ctx_losses_dict.items()
-                    })
-                    inv_norm_dict = NumbersDict({
-                        # in case we have no inv norm factor we use 1 to normalize via the step count
-                        name: float(
-                            loss.inv_norm_factor.detach().cpu().numpy()) if loss.inv_norm_factor is not None else 1
-                        for name, loss in ctx_losses_dict.items()
-                    })
+                    losses_dict = NumbersDict(
+                        {name: float(loss.loss.detach().cpu().numpy()) for name, loss in ctx_losses_dict.items()}
+                    )
+                    inv_norm_dict = NumbersDict(
+                        {
+                            # in case we have no inv norm factor we use 1 to normalize via the step count
+                            name: float(loss.inv_norm_factor.detach().cpu().numpy())
+                            if loss.inv_norm_factor is not None
+                            else 1
+                            for name, loss in ctx_losses_dict.items()
+                        }
+                    )
                     accumulated_losses_dict += losses_dict
                     accumulated_inv_norm_dict += inv_norm_dict
                     self.print_step_info(
-                        f"eval {dataset_name} epoch {self.epoch}", step_idx, step_start_time=step_time_start,
+                        f"eval {dataset_name} epoch {self.epoch}",
+                        step_idx,
+                        step_start_time=step_time_start,
                         total_loss=float(total_loss.detach().cpu().numpy()),
-                        loss_dict=losses_dict / inv_norm_dict
+                        loss_dict=losses_dict / inv_norm_dict,
                     )
                     step_idx += 1
 
@@ -235,8 +243,6 @@ class Engine(EngineBase):
                 "Finished evaluating {} in {:.3}s".format(dataset_name, time.time() - dataset_start_time),
                 file=log.v3,
             )
-
-
 
     def _create_data_loader(self, dataset: Dataset) -> DataLoader2:
         """
@@ -460,7 +466,9 @@ class Engine(EngineBase):
         assert count_bytes > 0
         return count_bytes
 
-    def print_step_info(self, report_prefix: str, step: int, step_start_time: float, total_loss: float, loss_dict: NumbersDict):
+    def print_step_info(
+        self, report_prefix: str, step: int, step_start_time: float, total_loss: float, loss_dict: NumbersDict
+    ):
         """
 
         :param report_prefix:
