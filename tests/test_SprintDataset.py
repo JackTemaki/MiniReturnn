@@ -45,6 +45,7 @@ def test_read_all():
         seq_idx += 1
     assert seq_idx == num_seqs
 
+
 if __name__ == "__main__":
     better_exchook.install()
     if len(sys.argv) <= 1:

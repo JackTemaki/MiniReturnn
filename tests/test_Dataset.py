@@ -47,6 +47,7 @@ def test_Task12AXDataset_random():
         print(targets)
     assert not dataset.is_less_than_num_seqs(n)
 
+
 def test_get_seq_order():
     dataset = Dataset()
     num_seqs = 30

@@ -6,6 +6,7 @@ import os
 import tests.setup_test_env  # noqa
 from nose.tools import assert_equal
 import returnn.sprint.interface as SprintAPI
+
 # from returnn.tf.engine import Engine
 from tempfile import mkdtemp
 from returnn.config import Config
