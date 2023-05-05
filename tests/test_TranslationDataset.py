@@ -10,11 +10,8 @@ import gzip
 import pickle
 
 from nose.tools import assert_equal
-from nose.tools import assert_not_equal
-from nose.tools import assert_raises
-from nose.tools import raises
 
-import _setup_test_env  # noqa
+import tests.setup_test_env  # noqa
 import better_exchook
 from returnn.datasets.lm import TranslationDataset, TranslationFactorsDataset
 from returnn.util.basic import init_thread_join_hack

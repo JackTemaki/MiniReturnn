@@ -1,7 +1,6 @@
 import sys
-import os
 
-import _setup_test_env  # noqa
+import tests.setup_test_env  # noqa
 from returnn.config import Config
 from returnn.learning_rate_control import *
 from nose.tools import assert_equal

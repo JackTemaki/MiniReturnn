@@ -3,7 +3,7 @@
 import sys
 import os
 
-import _setup_test_env  # noqa
+import tests.setup_test_env  # noqa
 
 sys.path += ["tools"]
 

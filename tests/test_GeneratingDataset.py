@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import _setup_test_env  # noqa
+import tests.setup_test_env  # noqa
 from nose.tools import assert_equal, assert_is_instance, assert_in, assert_not_in, assert_true, assert_false
 from returnn.datasets.generating import *
 from returnn.util.basic import PY3, unicode

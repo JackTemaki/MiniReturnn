@@ -8,10 +8,14 @@ To generate data, we can use the GeneratingDataset code.
 
 from __future__ import annotations
 
+import os
 import sys
 from importlib import import_module
 
-import _setup_test_env  # noqa
+test_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(test_dir))
+
+import tests.setup_test_env  # noqa
 import returnn.datasets.generating as generating_dataset
 from returnn.datasets import Dataset
 from returnn.util.basic import ObjAsDict

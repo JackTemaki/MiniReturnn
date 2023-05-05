@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import _setup_test_env  # noqa
+import tests.setup_test_env  # noqa
 import sys
 import unittest
 import torch
@@ -67,7 +67,7 @@ def test_pipeline_serialization():
 
 def test_HDFDataset():
     # https://github.com/rwth-i6/returnn/issues/1281
-    from test_HDFDataset import generate_hdf_from_other, HDFDataset
+    from tests.test_HDFDataset import generate_hdf_from_other, HDFDataset
 
     hdf_fn = generate_hdf_from_other({"class": "Task12AXDataset", "num_seqs": 23})
     hdf_dataset = HDFDataset(files=[hdf_fn], cache_byte_size=0)

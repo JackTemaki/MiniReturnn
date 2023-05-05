@@ -3,14 +3,14 @@ tests for MultiProcDataset
 """
 
 from __future__ import annotations
-import _setup_test_env  # noqa
+import tests.setup_test_env  # noqa
 from typing import List
 import sys
 import unittest
 import better_exchook
 from returnn.datasets.basic import Dataset, DatasetSeq, init_dataset
 from returnn.datasets.multi_proc import MultiProcDataset
-from test_HDFDataset import generate_hdf_from_other
+from tests.test_HDFDataset import generate_hdf_from_other
 
 
 def dummy_iter_dataset(dataset: Dataset) -> List[DatasetSeq]:

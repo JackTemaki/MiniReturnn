@@ -4,14 +4,14 @@ test logging
 
 from __future__ import annotations
 
-import _setup_test_env  # noqa
+import tests.setup_test_env  # noqa
 from subprocess import Popen, PIPE, STDOUT, CalledProcessError
 import re
 import os
 import sys
 from pprint import pprint
 import unittest
-from nose.tools import assert_less, assert_in, assert_equal
+from nose.tools import assert_in, assert_equal
 import better_exchook
 
 

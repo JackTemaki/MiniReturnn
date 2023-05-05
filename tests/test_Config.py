@@ -1,5 +1,5 @@
 import sys
-import _setup_test_env  # noqa
+import tests.setup_test_env  # noqa
 import unittest
 from nose.tools import assert_equal, assert_is_instance, assert_in, assert_greater, assert_true, assert_false
 from pprint import pprint

@@ -4,16 +4,13 @@ tests for HDF dataset
 
 from __future__ import annotations
 
-import os
 import sys
-import _setup_test_env  # noqa
+import tests.setup_test_env  # noqa
 
 from returnn.datasets import Dataset
 from returnn.datasets.hdf import *
 from nose.tools import assert_equal
 from nose.tools import assert_not_equal
-from nose.tools import assert_raises
-from nose.tools import raises
 import returnn.util.basic as util
 import h5py
 import numpy as np

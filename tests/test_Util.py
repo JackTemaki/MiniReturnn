@@ -1,12 +1,11 @@
 # -*- coding: utf8 -*-
 
-import sys
 import os
 
 my_dir = os.path.dirname(os.path.realpath(__file__))
-import _setup_test_env  # noqa
+import tests.setup_test_env  # noqa
 from nose.tools import assert_equal, assert_not_equal, assert_raises, assert_true, assert_is
-from numpy.testing.utils import assert_almost_equal
+from numpy.testing import assert_almost_equal
 from returnn.util.basic import *
 import numpy as np
 import numpy
