@@ -509,11 +509,13 @@ def test_rnn_initData():
     hdf_fn = generate_hdf_from_dummy()
     from returnn.config import Config
 
-    config = Config({
-        "cache_size": "0",
-        "train": {"class": "HDFDataset", "files": [hdf_fn]},
-        "dev": {"class": "HDFDataset", "files": [hdf_fn]}
-    })
+    config = Config(
+        {
+            "cache_size": "0",
+            "train": {"class": "HDFDataset", "files": [hdf_fn]},
+            "dev": {"class": "HDFDataset", "files": [hdf_fn]},
+        }
+    )
     import returnn.__main__ as rnn
 
     rnn.config = config
