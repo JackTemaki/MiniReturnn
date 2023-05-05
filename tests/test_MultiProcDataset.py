@@ -51,7 +51,7 @@ def compare_dataset_seqs(seqs1: List[DatasetSeq], seqs2: List[DatasetSeq]):
             assert (seq1.features[key] == seq2.features[key]).all()
 
 
-def deactivated_test_MultiProcDataset_n1_b1_default():
+def test_MultiProcDataset_n1_b1_default():
     hdf_fn = generate_hdf_from_other({"class": "Task12AXDataset", "num_seqs": 23})
     hdf_dataset_dict = {"class": "HDFDataset", "files": [hdf_fn]}
     hdf_dataset = init_dataset(hdf_dataset_dict)
@@ -64,7 +64,7 @@ def deactivated_test_MultiProcDataset_n1_b1_default():
     compare_dataset_seqs(hdf_dataset_seqs, mp_dataset_seqs)
 
 
-def deactivated_test_MultiProcDataset_n3_b5_shuffle():
+def test_MultiProcDataset_n3_b5_shuffle():
     hdf_fn = generate_hdf_from_other({"class": "Task12AXDataset", "num_seqs": 23})
     hdf_dataset_dict = {"class": "HDFDataset", "files": [hdf_fn], "seq_ordering": "random"}
     hdf_dataset = init_dataset(hdf_dataset_dict)

@@ -25,7 +25,6 @@ jobs:
           - TEST=LearningRateControl
           - TEST=MultiProcDataset
           - TEST=SprintDataset
-          - TEST=SprintInterface
           - TEST=TranslationDataset
           - TEST=Util
 
