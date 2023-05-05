@@ -169,7 +169,6 @@ class SprintDatasetBase(Dataset):
             self.num_outputs["speaker_name"] = (len(self.target_maps["speaker_name"]), 1)
         else:
             self.num_outputs["speaker_name"] = (256, 1)
-        self._base_init()
         # At this point, we are ready for data. In case we don't use the Sprint PythonSegmentOrdering
         # (SprintInterface.getSegmentList()), we must call this at least once.
         if not self.multiple_epochs:
