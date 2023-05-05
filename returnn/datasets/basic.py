@@ -14,7 +14,6 @@ __email__ = "doetsch@i6.informatik.rwth-aachen.de"
 
 from threading import RLock
 from random import Random
-import os
 import numpy
 import functools
 import typing
@@ -933,48 +932,6 @@ def init_dataset(kwargs, extra_kwargs=None, default_kwargs=None):
     assert isinstance(obj, Dataset)
     obj.initialize()
     return obj
-
-
-def init_dataset_via_str(config_str, config=None, **kwargs):
-    """
-    :param str config_str: hdf-files, or "LmDataset:..." or so
-    :param returnn.config.Config|None config: optional, only for "sprint:..."
-    :param int|None cache_byte_size: optional, only for HDFDataset
-    :rtype: Dataset
-    """
-    kwargs = kwargs.copy()
-    from returnn.datasets.hdf import HDFDataset
-
-    if config_str.startswith("sprint:"):
-        kwargs["sprintConfigStr"] = config_str[len("sprint:") :]
-        assert config, "need config for dataset in 'sprint:...' format. or use 'ExternSprintDataset:...' instead"
-        sprint_trainer_exec_path = config.value("sprint_trainer_exec_path", None)
-        assert sprint_trainer_exec_path, "specify sprint_trainer_exec_path in config"
-        kwargs["sprintTrainerExecPath"] = sprint_trainer_exec_path
-        from returnn.datasets.sprint import ExternSprintDataset
-
-        cls = ExternSprintDataset
-    elif config_str.startswith("config:"):
-        from returnn.config import get_global_config
-
-        if not config:
-            config = get_global_config()
-        data = eval(config_str[len("config:") :], config.typed_dict, config.typed_dict)
-        return init_dataset(data, extra_kwargs=kwargs)
-    elif ":" in config_str:
-        kwargs.update(eval("dict(%s)" % config_str[config_str.find(":") + 1 :]))
-        class_name = config_str[: config_str.find(":")]
-        cls = get_dataset_class(class_name)
-    else:
-        cls = HDFDataset
-    data = cls(**kwargs)
-    if isinstance(data, HDFDataset):
-        for f in config_str.split(","):
-            if f:
-                assert os.path.exists(f)
-                data.add_file(f)
-    data.initialize()
-    return data
 
 
 def convert_data_dims(data_dims, leave_dict_as_is=False):

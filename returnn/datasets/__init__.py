@@ -5,4 +5,4 @@ and also mostly independent from other parts of RETURNN, except some utils and l
 """
 
 # Make available the most basic API directly here.
-from .basic import Dataset, init_dataset, init_dataset_via_str
+from .basic import Dataset, init_dataset
