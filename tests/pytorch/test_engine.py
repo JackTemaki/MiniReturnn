@@ -65,5 +65,5 @@ def test_engine_train():
         )
 
         engine = Engine(config)
-        engine.init_train_from_config(config=config, train_data=train_data, dev_data=cv_data)
+        engine.init_train(train_data=train_data, dev_data=cv_data)
         engine.train()
