@@ -54,7 +54,7 @@ def test_func():
     """
         )
         cfgfile.flush()
-        rnn.init_config(command_line_options=[cfgfile.name, "--task", "search"])
+        rnn.init_config(command_line_options=[cfgfile.name, "++task", "search"])
 
     assert isinstance(rnn.config, Config)
     rnn.config.typed_dict.pop("__builtins__", None)  # not needed, too verbose for pprint
