@@ -82,6 +82,9 @@ class Engine(EngineBase):
         if self._start_epoch > 1:
             self._load_optimizer(self._start_epoch)
 
+        self._train_step_func = self.config.typed_value("train_step")
+        assert self._train_step_func, "train_step not defined"
+
     def init_forward(
         self,
         eval_data: Optional[Dataset] = None,
