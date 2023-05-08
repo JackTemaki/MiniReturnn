@@ -10,59 +10,6 @@ better_exchook.replace_traceback_format_tb()
 from io import StringIO
 
 
-def test_old_format():
-    config = Config()
-    config.load_file(
-        StringIO(
-            """
-  # comment
-  num_inputs 3
-  hidden_type forward,lstm
-  """
-        )
-    )
-
-    assert_true(config.has("num_inputs"))
-    assert_true(config.has("hidden_type"))
-    assert_equal(config.int("num_inputs", -1), 3)
-    assert_equal(config.value("hidden_type", "x"), "forward,lstm")
-    assert_equal(config.value("hidden_type", "x", index=0), "forward")
-    assert_equal(config.value("hidden_type", "x", index=1), "lstm")
-    assert_equal(config.list("hidden_type", ["x"]), ["forward", "lstm"])
-
-    assert_false(config.is_typed("num_inputs"))
-    assert_false(config.is_typed("hidden_type"))
-
-
-def test_json_format():
-    config = Config()
-    config.load_file(
-        StringIO(
-            """
-  {
-  // comment
-  "num_inputs": 3,
-  "hidden_type": ["forward", "lstm"]
-  }
-  """
-        )
-    )
-
-    assert_true(config.has("num_inputs"))
-    assert_true(config.has("hidden_type"))
-    assert_equal(config.int("num_inputs", -1), 3)
-    assert_equal(config.value("hidden_type", "x"), "forward,lstm")
-    assert_equal(config.value("hidden_type", "x", index=0), "forward")
-    assert_equal(config.value("hidden_type", "x", index=1), "lstm")
-    assert_equal(config.list("hidden_type", ["x"]), ["forward", "lstm"])
-
-    assert_true(config.is_typed("num_inputs"))
-    assert_true(config.is_typed("hidden_type"))
-    assert_is_instance(config.typed_value("num_inputs"), int)
-    assert_is_instance(config.typed_value("hidden_type"), list)
-    assert_equal(config.typed_value("hidden_type"), ["forward", "lstm"])
-
-
 def test_py_config():
     config = Config()
     config.load_file(
