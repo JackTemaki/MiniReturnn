@@ -7,6 +7,7 @@ import tests.setup_test_env  # noqa
 from nose.tools import assert_equal, assert_not_equal, assert_raises, assert_true, assert_is
 from numpy.testing import assert_almost_equal
 from returnn.util.basic import *
+from returnn.util.compiling import NativeCodeCompiler
 import numpy as np
 import numpy
 import unittest

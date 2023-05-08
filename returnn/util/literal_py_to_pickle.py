@@ -9,7 +9,7 @@ https://github.com/albertz/literal-python-to-pickle
 import pickle
 import ctypes
 import os
-from .basic import NativeCodeCompiler
+from .compiling import NativeCodeCompiler
 
 
 def literal_eval(s):

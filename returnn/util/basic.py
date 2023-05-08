@@ -21,8 +21,6 @@ import numpy as np
 import re
 import time
 
-from returnn.util.compiling import NativeCodeCompiler
-
 try:
     import thread
 except ImportError:
@@ -35,8 +33,7 @@ import builtins
 
 # Moved imports
 # noinspection PyUnresolvedReferences
-from numbers_dict import NumbersDict
-from compiling import NativeCodeCompiler
+from .numbers_dict import NumbersDict
 
 PY3 = sys.version_info[0] >= 3
 
@@ -2252,6 +2249,7 @@ def get_patch_atfork_lib():
     :return: path to our patch_atfork lib. see :func:`maybe_restart_returnn_with_atfork_patch`
     :rtype: str
     """
+    from .compiling import NativeCodeCompiler
     native = NativeCodeCompiler(base_name="patch_atfork", code_version=2, code=_c_code_patch_atfork, is_cpp=False)
     fn = native.get_lib_filename()
     return fn

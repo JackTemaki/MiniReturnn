@@ -6,13 +6,14 @@ This Sprint interface is to be used for ExternSprintDataset, which should automa
 
 from __future__ import annotations
 
+from io import BytesIO
 import sys
 import os
 import typing
 import better_exchook
 import returnn.util.task_system as task_system
 from returnn.util.task_system import Pickler
-from returnn.util.basic import to_bool, unicode, BytesIO
+from returnn.util.basic import to_bool, unicode
 
 # Start Sprint PythonSegmentOrder interface. {
 # We use the PythonSegmentOrder just to get an estimate (upper limit) about the number of sequences.

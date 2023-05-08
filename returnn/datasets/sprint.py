@@ -6,6 +6,7 @@ Note that from the main RETURNN process, you probably want ExternSprintDataset i
 from __future__ import annotations
 
 import atexit
+from io import BytesIO
 import os
 import signal
 import sys
@@ -24,7 +25,7 @@ from returnn.datasets.basic import Dataset, DatasetSeq
 from .cached2 import CachedDataset2
 from returnn.log import log
 from returnn.util.task_system import Unpickler, numpy_copy_and_set_unused
-from returnn.util.basic import eval_shell_str, interrupt_main, unicode, PY3, BytesIO, close_all_fds_except
+from returnn.util.basic import eval_shell_str, interrupt_main, unicode, PY3, close_all_fds_except
 
 
 class SprintDatasetBase(Dataset):
