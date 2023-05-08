@@ -2691,10 +2691,7 @@ def log_runtime_info_to_dir(path, config):
             if os.path.exists(target_fn):
                 continue
             shutil.copy(fn, target_fn)
-            config_type = Config.get_config_file_type(fn)
             comment_prefix = "#"
-            if config_type == "js":
-                comment_prefix = "//"
             with open(target_fn, "a") as f:
                 f.write(
                     "\n\n\n"

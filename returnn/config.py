@@ -4,38 +4,15 @@ Provides :class:`Config` and some related helpers.
 
 from __future__ import annotations
 
-__author__ = "Patrick Doetsch"
-__copyright__ = "Copyright 2014"
-__credits__ = ["Patrick Doetsch", "Paul Voigtlaender"]
-__license__ = "GPL"
-__version__ = "0.9"
-__maintainer__ = "Patrick Doetsch"
-__email__ = "doetsch@i6.informatik.rwth-aachen.de"
-
 import contextlib
 import sys
 import typing
 import os
 
-PY3 = sys.version_info[0] >= 3
-
-if PY3:
-    import builtins
-
-    unicode = str
-    long = int
-else:
-    # noinspection PyUnresolvedReferences
-    import __builtin__ as builtins
-
-    unicode = builtins.unicode  # type: typing.Type[str]
-    long = builtins.long  # type: typing.Type[int]
-
 
 class Config:
     """
-    Reads in some config file, and provides access to the key/value items.
-    We support some simple text-line-based config, JSON, and Python format.
+    Reads in a python-based config file, and provides access to the key/value items.
     """
 
     def __init__(self, items=None):
@@ -94,38 +71,8 @@ class Config:
                 user_ns.update({"config": self, "__file__": filename, "__name__": "__returnn_config__"})
                 custom_exec(content, filename, user_ns, user_ns)
             return
-        if content.startswith("{"):  # assume JSON
-            from returnn.util.basic import load_json
-
-            json_content = load_json(content=content)
-            assert isinstance(json_content, dict)
-            self.update(json_content)
-            return
-        # old line-based format
-        for line in content.splitlines():
-            if "#" in line:  # Strip away comment.
-                line = line[: line.index("#")]
-            line = line.strip()
-            if not line:
-                continue
-            line = line.split(None, 1)
-            assert len(line) == 2, "unable to parse config line: %r" % line
-            self.add_line(key=line[0], value=line[1])
-
-    @classmethod
-    def get_config_file_type(cls, f):
-        """
-        :param str f: file path
-        :return: "py", "js" or "txt"
-        :rtype: str
-        """
-        with open(f, "r") as f:
-            start = f.read(3)
-        if start.startswith("#!"):
-            return "py"
-        if start.startswith("{"):
-            return "js"
-        return "txt"
+        else:
+            raise ValueError("Invalid config type, maybe you forgot '#!' in the beginning of your config file?")
 
     def parse_cmd_args(self, args):
         """
@@ -134,90 +81,6 @@ class Config:
         from optparse import OptionParser
 
         parser = OptionParser()
-        parser.add_option(
-            "-a",
-            "--activation",
-            dest="activation",
-            help="[STRING/LIST] Activation functions: logistic, tanh, softsign, relu, identity, zero, one, maxout.",
-        )
-        parser.add_option(
-            "-b",
-            "--batch_size",
-            dest="batch_size",
-            help="[INTEGER/TUPLE] Maximal number of frames per batch (optional: shift of batching window).",
-        )
-        parser.add_option(
-            "-c",
-            "--chunking",
-            dest="chunking",
-            help="[INTEGER/TUPLE] Maximal number of frames per sequence (optional: shift of chunking window).",
-        )
-        parser.add_option("-d", "--description", dest="description", help="[STRING] Description of experiment.")
-        parser.add_option("-e", "--epoch", dest="epoch", help="[INTEGER] Starting epoch.")
-        parser.add_option("-E", "--eval", dest="eval", help="[STRING] eval file path")
-        parser.add_option(
-            "-f",
-            "--gate_factors",
-            dest="gate_factors",
-            help="[none/local/global] Enables pooled (local) or separate (global) coefficients on gates.",
-        )
-        parser.add_option("-g", "--lreg", dest="lreg", help="[FLOAT] L1 or L2 regularization.")
-        parser.add_option(
-            "-i",
-            "--save_interval",
-            dest="save_interval",
-            help="[INTEGER] Number of epochs until a new model will be saved.",
-        )
-        parser.add_option("-j", "--dropout", dest="dropout", help="[FLOAT] Dropout probability (0 to disable).")
-        parser.add_option(
-            "-k", "--output_file", dest="output_file", help="[STRING] Path to target file for network output."
-        )
-        parser.add_option("-l", "--log", dest="log", help="[STRING] Log file path.")
-        parser.add_option("-L", "--load", dest="load", help="[STRING] load model file path.")
-        parser.add_option(
-            "-m", "--momentum", dest="momentum", help="[FLOAT] Momentum term in gradient descent optimization."
-        )
-        parser.add_option(
-            "-n", "--num_epochs", dest="num_epochs", help="[INTEGER] Number of epochs that should be trained."
-        )
-        parser.add_option("-o", "--order", dest="order", help="[default/sorted/random] Ordering of sequences.")
-        parser.add_option("-p", "--loss", dest="loss", help="[loglik/sse/ctc] Objective function to be optimized.")
-        parser.add_option(
-            "-q",
-            "--cache",
-            dest="cache",
-            help="[INTEGER] Cache size in bytes (supports notation for kilo (K), mega (M) and gigabyte (G)).",
-        )
-        parser.add_option(
-            "-r",
-            "--learning_rate",
-            dest="learning_rate",
-            help="[FLOAT] Learning rate in gradient descent optimization.",
-        )
-        parser.add_option(
-            "-s", "--hidden_sizes", dest="hidden_sizes", help="[INTEGER/LIST] Number of units in hidden layers."
-        )
-        parser.add_option(
-            "-t",
-            "--truncate",
-            dest="truncate",
-            help="[INTEGER] Truncates sequence in BPTT routine after specified number of timesteps (-1 to disable).",
-        )
-        parser.add_option(
-            "-u",
-            "--device",
-            dest="device",
-            help="[STRING/LIST] CPU and GPU devices that should be used (example: gpu0,cpu[1-6] or gpu,cpu*).",
-        )
-        parser.add_option("-v", "--verbose", dest="log_verbosity", help="[INTEGER] Verbosity level from 0 - 5.")
-        parser.add_option("-w", "--window", dest="window", help="[INTEGER] Width of sliding window over sequence.")
-        parser.add_option("-x", "--task", dest="task", help="[train/forward/analyze] Task of the current program call.")
-        parser.add_option(
-            "-y", "--hidden_type", dest="hidden_type", help="[VALUE/LIST] Hidden layer types: forward, recurrent, lstm."
-        )
-        parser.add_option(
-            "-z", "--max_sequences", dest="max_seqs", help="[INTEGER] Maximal number of sequences per batch."
-        )
         parser.add_option("--config", dest="load_config", help="[STRING] load config")
         (options, args) = parser.parse_args(list(args))
         options = vars(options)
@@ -339,22 +202,6 @@ class Config:
         """
         for key, value in dikt.items():
             self.set(key, value)
-
-    def _hack_value_reading_debug(self):
-        orig_value_func = self.value
-
-        def wrapped_value_func(*args, **kwargs):
-            """
-            Wrapped func.
-            """
-            res = orig_value_func(*args, **kwargs)
-            print(
-                "Config.value(%s) -> %r"
-                % (", ".join(list(map(repr, args)) + ["%s=%r" % (k, v) for (k, v) in kwargs.items()]), res)
-            )
-            return res
-
-        setattr(self, "value", wrapped_value_func)
 
     def value(self, key, default, index=None, list_join_str=","):
         """
@@ -485,7 +332,7 @@ class Config:
         else:
             value = self.value(key, default, index)
         if value is not None:
-            if isinstance(value, (str, unicode)):
+            if isinstance(value, str):
                 # Special case for float as str. We automatically cast this case.
                 # This is also to handle special values such as "inf".
                 value = float(value)
@@ -598,7 +445,6 @@ def set_global_config(config):
 
     :param Config config:
     """
-    _get_or_set_config_via_tf_default_graph(config)
     global _global_config
     _global_config = config
 
@@ -609,9 +455,6 @@ def get_global_config(raise_exception=True, auto_create=False):
     :param bool auto_create: if no global config is found, it creates one and returns it
     :rtype: Config|None
     """
-    config = _get_or_set_config_via_tf_default_graph()
-    if config:
-        return config
     if _global_config:
         return _global_config
     # We are the main process.
@@ -633,67 +476,3 @@ def get_global_config(raise_exception=True, auto_create=False):
     if raise_exception:
         raise Exception("No global config found.")
     return None
-
-
-def _get_or_set_config_via_tf_default_graph(config=None):
-    """
-    This is done in a safe way, and might just be a no-op.
-    When TF is not imported yet, it will just return.
-
-    :param Config|None config: if set, will set it
-    :rtype: Config|None
-    """
-    if "tensorflow" not in sys.modules:
-        return None
-    from returnn.tf.compat import v1 as tf_v1
-
-    graph = tf_v1.get_default_graph()
-    # We could use collection refs, but this could cause other problems,
-    # and is more complicated than what we need.
-    # We just use a custom own attrib.
-    attrib_name = "_RETURNN_config_in_graph"
-    if config:
-        setattr(graph, attrib_name, config)
-    return getattr(graph, attrib_name, None)
-
-
-def network_json_from_config(config):
-    """
-    :param Config config:
-    :rtype: dict[str]
-    """
-    if config.has("network") and config.is_typed("network"):
-        json_content = config.typed_value("network")
-        assert isinstance(json_content, dict)
-        assert json_content
-        return json_content
-    else:
-        raise ValueError("Network is not defined in config. Define `network`.")
-
-
-def tf_should_use_gpu(config):
-    """
-    :param Config config:
-    :rtype: bool
-    """
-    cfg_dev = config.value("device", None)
-    # Short path.
-    if cfg_dev == "gpu":
-        return True
-    if cfg_dev == "cpu":
-        return False
-    if not cfg_dev:
-        # Better default: Use GPU if available.
-        from returnn.log import log
-        from returnn.tf.util.basic import is_gpu_available
-
-        if is_gpu_available():
-            print("Device not set explicitly, and we found a GPU, which we will use.", file=log.v2)
-            config.set("device", "gpu")
-            return True
-        else:
-            print("Device not set explicitly, and no GPU found.", file=log.v2)
-            config.set("device", "cpu")
-            return False
-    else:
-        raise ValueError("Currently unsupported TF device %r specified" % (cfg_dev,))
