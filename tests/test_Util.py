@@ -1,5 +1,5 @@
 # -*- coding: utf8 -*-
-
+import inspect
 import os
 
 my_dir = os.path.dirname(os.path.realpath(__file__))
@@ -218,7 +218,7 @@ def test_get_func_kwargs():
     def dummy_func(net, var, update_ops):
         pass
 
-    assert_equal(list(getargspec(dummy_func).args), ["net", "var", "update_ops"])
+    assert_equal(list(inspect.getfullargspec(dummy_func).args), ["net", "var", "update_ops"])
 
 
 def test_simple_obj_repr():
@@ -274,14 +274,6 @@ def test_obj_diff_list_allowed_mapping():
             "['b']   key 'B:b' not in self",
         ],
     )
-
-
-@unittest.skipIf(PY3, "only for Python 2")
-def test_py2_utf8_str_to_unicode():
-    assert_equal(py2_utf8_str_to_unicode("a"), "a")
-    assert_is(type(py2_utf8_str_to_unicode("a")), str)
-    assert_equal(py2_utf8_str_to_unicode("äöü"), "äöü")
-    assert_is(type(py2_utf8_str_to_unicode("äöü")), unicode)
 
 
 def test_CollectionReadCheckCovered():

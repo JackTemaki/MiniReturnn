@@ -19,7 +19,6 @@ import typing
 import numpy
 
 from returnn.log import log
-from returnn.util.basic import PY3
 
 
 class Vocabulary(object):
@@ -136,12 +135,6 @@ class Vocabulary(object):
                 d = pickle.load(open(filename, "rb"))
             else:
                 d = eval(open(filename, "r").read())
-                if not PY3:
-                    # Any utf8 string will not be a unicode string automatically, so enforce this.
-                    assert isinstance(d, dict)
-                    from returnn.util.basic import py2_utf8_str_to_unicode
-
-                    d = {py2_utf8_str_to_unicode(s): i for (s, i) in d.items()}
             assert isinstance(d, dict)
             labels = {idx: label for (label, idx) in sorted(d.items())}
             min_label, max_label, num_labels = min(labels), max(labels), len(labels)

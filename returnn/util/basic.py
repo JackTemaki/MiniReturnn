@@ -35,8 +35,6 @@ import builtins
 # noinspection PyUnresolvedReferences
 from .numbers_dict import NumbersDict
 
-PY3 = sys.version_info[0] >= 3
-
 unicode = str
 long = int
 # noinspection PyShadowingBuiltins
@@ -111,8 +109,7 @@ def sys_cmd_out_lines(s):
         env=dict(os.environ, LANG="en_US.UTF-8", LC_ALL="en_US.UTF-8"),
     )
     stdout = p.communicate()[0]
-    if PY3:
-        stdout = stdout.decode("utf8")
+    stdout = stdout.decode("utf8")
     result = [line.strip() for line in stdout.split("\n")[:-1]]
     p.stdout.close()
     if p.returncode != 0:
@@ -722,7 +719,7 @@ def simple_obj_repr(obj):
     :rtype: str
     """
     return obj.__class__.__name__ + "(%s)" % ", ".join(
-        ["%s=%s" % (arg, better_repr(getattr(obj, arg))) for arg in getargspec(obj.__init__).args[1:]]
+        ["%s=%s" % (arg, better_repr(getattr(obj, arg))) for arg in inspect.getfullargspec(obj.__init__).args[1:]]
     )
 
 
@@ -1244,7 +1241,7 @@ def collect_class_init_kwargs(cls, only_with_default=False):
         # Check Python function. Could be builtin func or so. Python 2 getargspec does not work in that case.
         if not inspect.ismethod(cls_.__init__) and not inspect.isfunction(cls_.__init__):
             continue
-        arg_spec = getargspec(cls_.__init__)
+        arg_spec = inspect.getfullargspec(cls_.__init__)
         args = arg_spec.args[1:]  # first arg is self, ignore
         if only_with_default:
             if arg_spec.defaults:
@@ -1258,20 +1255,6 @@ def collect_class_init_kwargs(cls, only_with_default=False):
                 if arg not in kwargs:
                     kwargs.append(arg)
     return kwargs
-
-
-def getargspec(func):
-    """
-    :func:`inspect.getfullargspec` or `inspect.getargspec` (Python 2)
-
-    :param func:
-    :return: FullArgSpec
-    """
-    if PY3:
-        return inspect.getfullargspec(func)
-    else:
-        # noinspection PyDeprecation
-        return inspect.getargspec(func)
 
 
 def custom_exec(source, source_filename, user_ns, user_global_ns):
@@ -1374,48 +1357,17 @@ def to_bool(v):
     raise ValueError("to_bool cannot handle %r" % v)
 
 
-def py2_utf8_str_to_unicode(s):
-    """
-    :param str s: e.g. the string literal "äöü" in Python 3 is correct, but in Python 2 it should have been u"äöü",
-      but just using "äöü" will actually be the raw utf8 byte sequence.
-      This can happen when you eval() some string.
-      We assume that you are using Python 2, and got the string (not unicode object) "äöü", or maybe "abc".
-      Also see :func:`_py2_unicode_to_str_recursive` and :func:`as_str`.
-    :return: if it is indeed unicode, it will return the unicode object, otherwise it keeps the string
-    :rtype: str|unicode
-    """
-    assert not PY3
-    assert isinstance(s, str)
-    try:
-        # noinspection PyUnresolvedReferences
-        s.decode("ascii")
-        return s
-    except UnicodeDecodeError:
-        pass
-    # noinspection PyUnresolvedReferences
-    return s.decode("utf8")
-
-
 def unicode_to_str(s):
     """
-    The behavior is different depending on Python 2 or Python 3. In all cases, the returned type is a str object.
-    Python 2:
-      We return the utf8 encoded str (which is like Python 3 bytes, or for ASCII, there is no difference).
-    Python 3:
-      We return a str object.
-    Note that this function probably does not make much sense.
-    It might be used when there is other code which expects a str object, no matter if Python 2 or Python 3.
-    In Python 2, a str object often holds UTF8 text, so the behavior of this function is fine then.
+    Tries to decode to utf-8 if input is bytes.
+    This function was originally used to distinguish between Python2 and Python3 behavior
     Also see :func:`as_str`.
 
     :param str|unicode|bytes s:
     :rtype: str
     """
-    if PY3 and isinstance(s, bytes):
+    if isinstance(s, bytes):
         s = s.decode("utf8")
-        assert isinstance(s, str)
-    if not PY3 and isinstance(s, unicode):
-        s = s.encode("utf8")
         assert isinstance(s, str)
     assert isinstance(s, str)
     return s

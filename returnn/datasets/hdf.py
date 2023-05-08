@@ -73,11 +73,6 @@ class HDFDataset(CachedDataset):
         :param str|bytes|unicode s:
         :rtype: str
         """
-        from returnn.util.basic import unicode, PY3
-
-        if not PY3 and isinstance(s, unicode):
-            s = s.encode("utf8")
-            assert isinstance(s, str)  # Python 2
         if not isinstance(s, str):  # bytes (Python 3)
             s = s.decode("utf-8")
         s = s.split("\0")[0]
@@ -1399,7 +1394,7 @@ class HDFDatasetWriter:
         :param int|float end_seq:
         :param bool use_progress_bar:
         """
-        from returnn.util.basic import NumbersDict, human_size, progress_bar_with_time, try_run, PY3
+        from returnn.util.basic import NumbersDict, human_size, progress_bar_with_time, try_run
 
         hdf_dataset = self.file
 
@@ -1512,8 +1507,7 @@ class HDFDatasetWriter:
                 hdf_dataset["targets/size"].attrs[hdf_data_key_map[data_key]] = dataset.num_outputs[data_key]
             if data_key in dataset.labels:
                 labels = dataset.labels[data_key]
-                if PY3:
-                    labels = [label.encode("utf8") for label in labels]
+                labels = [label.encode("utf8") for label in labels]
                 assert len(labels) == dataset.num_outputs[data_key][0]
             else:
                 labels = ["%s-class-%i" % (data_key, i) for i in range(dataset.get_data_dim(data_key))]

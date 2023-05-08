@@ -5,7 +5,6 @@ from __future__ import annotations
 import tests.setup_test_env  # noqa
 from nose.tools import assert_equal, assert_is_instance, assert_in, assert_not_in, assert_true, assert_false
 from returnn.datasets.generating import *
-from returnn.util.basic import PY3, unicode
 import os
 import unittest
 
@@ -84,12 +83,8 @@ def test_StaticDataset_utf8():
     s = "wër"
     print("some unicode str:", s, "repr:", repr(s), "type:", type(s), "len:", len(s))
     assert len(s) == 3
-    if PY3:
-        assert isinstance(s, str)
-        s_byte_list = list(s.encode("utf8"))
-    else:
-        assert isinstance(s, unicode)
-        s_byte_list = list(map(ord, s.encode("utf8")))
+    assert isinstance(s, str)
+    s_byte_list = list(s.encode("utf8"))
     print("utf8 byte list:", s_byte_list)
     assert len(s_byte_list) == 4 > 3
     raw = numpy.array(s_byte_list, dtype="uint8")

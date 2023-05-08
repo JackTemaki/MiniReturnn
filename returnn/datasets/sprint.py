@@ -25,7 +25,7 @@ from returnn.datasets.basic import Dataset, DatasetSeq
 from .cached2 import CachedDataset2
 from returnn.log import log
 from returnn.util.task_system import Unpickler, numpy_copy_and_set_unused
-from returnn.util.basic import eval_shell_str, interrupt_main, unicode, PY3, close_all_fds_except
+from returnn.util.basic import eval_shell_str, interrupt_main, unicode, close_all_fds_except
 
 
 class SprintDatasetBase(Dataset):
@@ -437,11 +437,8 @@ class SprintDatasetBase(Dataset):
             if isinstance(v, unicode):
                 v = v.encode("utf8")
             if isinstance(v, (str, bytes)):
-                if PY3:
-                    assert isinstance(v, bytes)
-                    v = list(v)
-                else:
-                    v = list(map(ord, v))
+                assert isinstance(v, bytes)
+                v = list(v)
                 v = numpy.array(v, dtype="uint8")
                 targets[key] = v
                 if self.str_add_final_zero:
@@ -934,12 +931,9 @@ class ExternSprintDataset(SprintDatasetBase):
             stream.write(data_raw)
         stream.seek(0)
         try:
-            if PY3:
-                # encoding is for converting Python2 strings to Python3.
-                # Cannot use utf8 because Numpy will also encode the data as strings and there we need it as bytes.
-                data_type, args = Unpickler(stream, encoding="bytes").load()
-            else:
-                data_type, args = Unpickler(stream).load()
+            # encoding is for converting Python2 strings to Python3.
+            # Cannot use utf8 because Numpy will also encode the data as strings and there we need it as bytes.
+            data_type, args = Unpickler(stream, encoding="bytes").load()
         except EOFError:
             raise Exception("%s: parse error of %i bytes (%r)" % (self, size, stream.getvalue()))
         return data_type, args
