@@ -384,7 +384,7 @@ class Engine(EngineBase):
         """
         Sets self._model to a torch.nn.Module.
 
-        :param epoch:
+        :param epoch: e.g. via BaseEngine.get_train_start_epoch()
         """
         checkpoint_state = None
         if epoch > 1:
@@ -397,10 +397,9 @@ class Engine(EngineBase):
             step = 0
         self._train_step = step
 
-        # See :mod:`rf.rand` docstring for an explanation of this logic.
         random_seed = self.config.int("random_seed", 42)
         random_seed = (epoch * 193939 + step * 19937 + random_seed * 27644437 + 479001599) % (2**31)
-        # rf.set_random_seed(random_seed)
+        torch.manual_seed(random_seed)
 
         get_model_func = self.config.typed_value("get_model")
         assert get_model_func, "get_model not defined"
