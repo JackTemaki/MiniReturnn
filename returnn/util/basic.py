@@ -2250,6 +2250,7 @@ def get_patch_atfork_lib():
     :rtype: str
     """
     from .compiling import NativeCodeCompiler
+
     native = NativeCodeCompiler(base_name="patch_atfork", code_version=2, code=_c_code_patch_atfork, is_cpp=False)
     fn = native.get_lib_filename()
     return fn
