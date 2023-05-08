@@ -14,11 +14,9 @@ from nose.tools import assert_equal
 import tests.setup_test_env  # noqa
 import better_exchook
 from returnn.datasets.lm import TranslationDataset, TranslationFactorsDataset
-from returnn.util.basic import init_thread_join_hack
 
 better_exchook.install()
 better_exchook.replace_traceback_format_tb()
-init_thread_join_hack()
 
 
 dummy_source_text = (

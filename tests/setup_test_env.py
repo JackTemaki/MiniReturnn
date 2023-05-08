@@ -34,9 +34,6 @@ def setup():
     os.environ.setdefault("RETURNN_TEST", "1")
 
     import returnn.util.basic as util
-
-    util.init_thread_join_hack()
-
     import better_exchook
 
     if sys.excepthook != sys.__excepthook__:

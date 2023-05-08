@@ -27,7 +27,7 @@ from returnn.engine.base import EngineBase
 from returnn.util.debug import init_ipython_kernel, init_better_exchook, init_faulthandler
 
 # noinspection PyUnresolvedReferences
-from returnn.util.basic import init_thread_join_hack, describe_returnn_version
+from returnn.util.basic import describe_returnn_version
 
 config = None  # type: typing.Optional[Config]
 engine = None  # type: typing.Optional[EngineBase]
@@ -222,7 +222,6 @@ def init(config_filename=None, command_line_options=(), config_updates=None, ext
     :param str|None extra_greeting:
     """
     debug_util.init_better_exchook()
-    util.init_thread_join_hack()
     init_config(
         config_filename=config_filename, command_line_options=command_line_options, extra_updates=config_updates
     )
