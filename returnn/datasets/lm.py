@@ -14,13 +14,15 @@ from .cached2 import CachedDataset2
 import gzip
 import xml.etree.ElementTree as ElementTree
 from returnn.log import log
-from returnn.datasets.util.cleaners import *
 from returnn.util.basic import parse_orthography, parse_orthography_into_symbols, load_json, unicode
 from returnn.util.literal_py_to_pickle import literal_eval
 import numpy
-import re
 import typing
 from random import Random
+
+# Import the cleaners for postprocessing
+# noinspection PyUnresolvedReference
+from returnn.datasets.util.cleaners import *
 
 
 class LmDataset(CachedDataset2):
