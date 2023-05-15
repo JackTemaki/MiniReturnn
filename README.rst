@@ -6,7 +6,7 @@ Mini-RETURNN is a feature-less derivative of `RETURNN <https://github.com/rwth-i
 No network helper functions are provided, all model logic has to be explicitly defined by the user.
 This is repository is intended to be a quick playground for custom experiments, for everything serious please use `RETURNN <https://github.com/rwth-i6/returnn>`__.
 
-General config-compatibility to RETURNN is kept, but technical details differ.
+General config-compatibility to RETURNN is kept, but technical details differ, especially regarding the Torch engine class.
 
 
 Removed features:
@@ -16,6 +16,9 @@ Removed features:
  - Some older Datasets that depended on removed features (no relevant Dataset should be missing)
  - Most utility code that was only used by Tensorflow code
  - There is no default keep-pattern of checkpoints, `keep` has to specified within the `cleanup_old_models` config dict explicitely
+ - "eval" dataset is no longer allowed, use "eval_datasets" instead
+ - __main__.py no longer handles datasets
+ - "hdf_dump" no longer allows strings but only config files, dumps only "train" (which it probably also did before).
 
 
 Changed behavior

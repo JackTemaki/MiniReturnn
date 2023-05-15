@@ -385,7 +385,7 @@ class Engine(EngineBase):
         # this can be an optional _eval_step_func later on
         self._forward_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
 
-    def _load_model(self, *, epoch: int, filename: Optional[str]= None):
+    def _load_model(self, *, epoch: int, filename: Optional[str] = None):
         """
         Sets self._model to a torch.nn.Module.
 
