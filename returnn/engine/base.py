@@ -42,6 +42,7 @@ class EngineBase(object):
 
         self.train_dataset = None  # type: Optional[Dataset]
         self.eval_datasets = {}  # type: Dict[str, Dataset]
+        self.forward_dataset = None  # type: Optional[Dataset]
 
         self.learning_rate = 0.0  # set in init_train_epoch
         self.learning_rate_control = None  # type: Optional[LearningRateControl]
@@ -50,21 +51,21 @@ class EngineBase(object):
         self,
         train_data: Optional[Dataset] = None,
         dev_data: Optional[Dataset] = None,
-        eval_data: Optional[Dataset] = None,
     ):
         """
         Initialize all engine parts needed for training
 
         :param train_data:
         :param dev_data:
-        :param eval_data:
         """
-        self.train_dataset = train_data
+        self.train_dataset = train_data or init_dataset(
+            self.config.typed_value("train", {}), default_kwargs={"name": "train"}
+        )
+
         self.eval_datasets.clear()
-        if dev_data:
-            self.eval_datasets["dev"] = dev_data
-        if eval_data:
-            self.eval_datasets["eval"] = eval_data
+        self.eval_datasets["dev"] = dev_data or init_dataset(
+            self.config.typed_value("dev", {}), default_kwargs={"name": "dev"}
+        )
         if self.config.has("eval_datasets"):
             for dataset_name, dataset_opts in self.config.typed_value("eval_datasets", {}).items():
                 self.eval_datasets[dataset_name] = init_dataset(dataset_opts, default_kwargs={"name": dataset_name})
@@ -72,17 +73,15 @@ class EngineBase(object):
         self.learning_rate_control = load_learning_rate_control_from_config(self.config)
         self.learning_rate = self.learning_rate_control.default_learning_rate
 
-    def init_forward(self, eval_data: Optional[Dataset] = None):
+    def init_forward(self, forward_data: Optional[Dataset] = None):
         """
         Initialize all engine parts needed for training
 
-        :param eval_data:
+        :param forward_data:
         """
-        if eval_data:
-            self.eval_datasets["eval"] = eval_data
-        if self.config.has("eval_datasets"):
-            for dataset_name, dataset_opts in self.config.typed_value("eval_datasets", {}).items():
-                self.eval_datasets[dataset_name] = init_dataset(dataset_opts, default_kwargs={"name": dataset_name})
+        self.forward_dataset = forward_data or init_dataset(
+            self.config.typed_value("forward", {}), default_kwargs={"name": "forward"}
+        )
 
     def train(self):
         raise NotImplementedError

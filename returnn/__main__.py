@@ -31,9 +31,6 @@ from returnn.util.basic import describe_returnn_version
 
 config = None  # type: typing.Optional[Config]
 engine = None  # type: typing.Optional[EngineBase]
-train_data = None  # type: typing.Optional[Dataset]
-dev_data = None  # type: typing.Optional[Dataset]
-eval_data = None  # type: typing.Optional[Dataset]
 quit_returnn = False
 
 
@@ -109,46 +106,6 @@ def init_log():
     Initializes the global :class:`Log`.
     """
     log.init_by_config(config)
-
-
-# noinspection PyShadowingNames
-def load_data(config, files_config_key, **kwargs):
-    """
-    :param Config config:
-    :param str files_config_key: such as "train" or "dev"
-    :param kwargs: passed on to init_dataset() or init_dataset_via_str()
-    :rtype: (Dataset,int)
-    :returns the dataset, and the cache byte size left over if we cache the whole dataset.
-    """
-    if not config.bool_or_other(files_config_key, None):
-        return None, 0
-    kwargs = kwargs.copy()
-    kwargs.setdefault("name", files_config_key)
-    if config.is_typed(files_config_key) and isinstance(config.typed_value(files_config_key), dict):
-        config_opts = config.typed_value(files_config_key)
-        assert isinstance(config_opts, dict)
-        kwargs.update(config_opts)
-        data = init_dataset(kwargs)
-    elif config.is_typed(files_config_key) and callable(config.typed_value(files_config_key)):
-        data = init_dataset(config.typed_value(files_config_key), default_kwargs=kwargs)
-    else:
-        raise ValueError(
-            "A dataset has to be defined as dict or callable, but found %s" % type(config.typed_value(files_config_key))
-        )
-    cache_leftover = 0
-    if isinstance(data, HDFDataset):
-        cache_leftover = data.definite_cache_leftover
-    return data, cache_leftover
-
-
-def init_data():
-    """
-    Initializes the globals train,dev,eval of type Dataset.
-    """
-    global train_data, dev_data, eval_data
-    dev_data, extra_cache_bytes_dev = load_data(config, "dev")
-    eval_data, extra_cache_bytes_eval = load_data(config, "eval")
-    train_data, extra_train = load_data(config, "train")
 
 
 def print_task_properties():
@@ -234,12 +191,8 @@ def init(config_filename=None, command_line_options=(), config_updates=None, ext
         print(extra_greeting, file=log.v1)
     returnn_greeting(config_filename=config_filename, command_line_options=command_line_options)
     debug_util.init_faulthandler()
-    init_engine()
     if config.bool("ipython", False):
         debug_util.init_ipython_kernel()
-    if need_data():
-        init_data()
-    print_task_properties()
     init_engine()
 
 
@@ -253,19 +206,6 @@ def finalize():
     sys.exited = True
 
 
-def need_data():
-    """
-    :return: whether we need to init the data (call :func:`init_data`) for the current task (:func:`execute_main_task`)
-    :rtype: bool
-    """
-    if config.has("need_data") and not config.bool("need_data", True):
-        return False
-    task = config.value("task", "train")
-    if task in ["nop", "cleanup_old_models"]:
-        return False
-    return True
-
-
 def execute_main_task():
     """
     Executes the main task (via config ``task`` option).
@@ -277,10 +217,7 @@ def execute_main_task():
     if config.is_true("dry_run"):
         print("Dry run, will not save anything.", file=log.v1)
     if task == "train":
-        assert (
-            train_data and train_data.have_seqs()
-        ), "no train files specified, check 'train' option: %s" % config.value("train", None)
-        engine.init_train(train_data, dev_data, eval_data)
+        engine.init_train()
         engine.train()
     elif task == "eval":
         raise NotImplementedError("eval task is currently not implemented")

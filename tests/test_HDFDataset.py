@@ -7,7 +7,7 @@ from __future__ import annotations
 import sys
 import tests.setup_test_env  # noqa
 
-from returnn.datasets import Dataset
+from returnn.datasets import Dataset, init_dataset
 from returnn.datasets.hdf import *
 from nose.tools import assert_equal
 from nose.tools import assert_not_equal
@@ -519,8 +519,8 @@ def test_rnn_initData():
     import returnn.__main__ as rnn
 
     rnn.config = config
-    rnn.init_data()
-    train, dev = rnn.train_data, rnn.dev_data
+    train = init_dataset(rnn.config.typed_value("train"))
+    dev = init_dataset(rnn.config.typed_value("dev"))
     assert train and dev
     assert isinstance(train, HDFDataset)
     assert isinstance(dev, HDFDataset)

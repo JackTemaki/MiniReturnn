@@ -40,6 +40,7 @@ class Engine(EngineBase):
         self._mp_manager = torch.multiprocessing.Manager()
         self._epoch_mp_shared = self._mp_manager.Value("i", 0)
         self._train_dataloader = None  # type: Optional[DataLoader2]
+        self._forward_dataloader = None  # type: Optional[DataLoader2]
         self._eval_dataloaders = {}  # type: Dict[str, DataLoader2]
 
         self._start_epoch = None  # type: Optional[int]
@@ -60,16 +61,14 @@ class Engine(EngineBase):
         self,
         train_data: Optional[Dataset] = None,
         dev_data: Optional[Dataset] = None,
-        eval_data: Optional[Dataset] = None,
     ):
         """
-        :param train_data:
-        :param dev_data:
-        :param eval_data:
+        :param train_data: Used when initializing from existing Datasets
+        :param dev_data: Used when initializing from existing Datasets
         """
-        super().init_train(train_data=train_data, dev_data=dev_data, eval_data=eval_data)
+        super().init_train(train_data=train_data, dev_data=dev_data)
 
-        self._train_dataloader = self._create_data_loader(train_data) if train_data else None
+        self._train_dataloader = self._create_data_loader(self.train_dataset)
         for dataset_name, dataset in self.eval_datasets.items():
             self._eval_dataloaders[dataset_name] = self._create_data_loader(dataset)
 
@@ -89,15 +88,13 @@ class Engine(EngineBase):
 
     def init_forward(
         self,
-        eval_data: Optional[Dataset] = None,
+        forward_data: Optional[Dataset] = None,
     ):
         """
-        :param eval_data:
+        :param forward_data:
         """
-
-        super().init_forward(eval_data=eval_data)
-        for dataset_name, dataset in self.eval_datasets.items():
-            self._eval_dataloaders[dataset_name] = self._create_data_loader(dataset)
+        super().init_forward(forward_data=forward_data)
+        self._forward_dataloader = self._create_data_loader(self.forward_dataset)
 
         self._start_epoch, filename = self.get_epoch_model(self.config)
 
@@ -261,35 +258,40 @@ class Engine(EngineBase):
         self._model.eval()
         init_forward_step_run_ctx(device=self._device)
 
-        for dataset_name, dataset in self.eval_datasets.items():
-            dataset_start_time = time.time()
-            print(f"Forwarding dataset {dataset_name!r}'", file=log.v3)
+        if forward_init_hook := self.config.typed_value("forward_init_hook", None):
+            assert callable(forward_init_hook)
+            forward_init_hook(get_run_ctx(), **{"__random_arg_%i" % int(random() * 100): None})
 
-            data_loader = self._eval_dataloaders[dataset_name]
+        dataset_start_time = time.time()
+        print(f"Start Forwarding", file=log.v3)
 
-            step_idx = 0
+        data_loader = self._forward_dataloader
+        step_idx = 0
 
-            with torch.no_grad():
-                for data in data_loader:
-                    step_time_start = time.time()
-                    run_ctx = get_run_ctx()
-                    run_ctx.init_step()
+        with torch.no_grad():
+            for data in data_loader:
+                step_time_start = time.time()
+                run_ctx = get_run_ctx()
+                run_ctx.init_step()
 
-                    self.run_forward_step(data, run_ctx)
+                self.run_forward_step(data, run_ctx)
 
-                    self.print_step_info(
-                        f"forward {dataset_name} epoch {self.epoch}",
-                        step_idx,
-                        step_start_time=step_time_start,
-                    )
-                    step_idx += 1
+                self.print_step_info(
+                    f"forward epoch {self.epoch}",
+                    step_idx,
+                    step_start_time=step_time_start,
+                )
+                step_idx += 1
 
-            assert step_idx > 0, "No data in dataset '{}'.".format(dataset_name)
+        assert step_idx > 0, "No data in forward dataset"
 
-            print(
-                "Finished forwarding {} in {:.3}s".format(dataset_name, time.time() - dataset_start_time),
-                file=log.v3,
-            )
+        if forward_finish_hook := self.config.typed_value("forward_finish_hook", None):
+            assert callable(forward_finish_hook)
+            forward_finish_hook(get_run_ctx(), **{"__random_arg_%i" % int(random() * 100): None})
+        print(
+            "Finished forwarding in {:.3}s".format(time.time() - dataset_start_time),
+            file=log.v3,
+        )
 
     def _create_data_loader(self, dataset: Dataset) -> DataLoader2:
         """
