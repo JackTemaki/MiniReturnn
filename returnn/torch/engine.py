@@ -4,12 +4,14 @@ Main engine for PyTorch
 
 from __future__ import annotations
 from typing import Optional, Callable, Dict, Tuple
+from contextlib import nullcontext
 
 import os
 import time
 import torch
 import torch.utils.data.datapipes as dp
-from torch import Tensor
+from torch import autocast, Tensor
+from torch.cuda import amp
 from torchdata.dataloader2 import DataLoader2
 from random import random
 
@@ -55,6 +57,9 @@ class Engine(EngineBase):
         self._device = "cuda" if torch.cuda.is_available() and torch.cuda.device_count() > 0 else "cpu"
         print(f"Using device {self._device}", file=log.v3)
 
+        self._amp_dtype = None  # type: Optional[torch.dtype]
+        self._grad_scaler = None  # type: Optional[amp.GradScaler]
+
     def init_train(
         self,
         train_data: Optional[Dataset] = None,
@@ -83,6 +88,14 @@ class Engine(EngineBase):
 
         self._train_step_func = self.config.typed_value("train_step")
         assert self._train_step_func, "train_step not defined"
+
+        amp_options = self.config.typed_value("torch_amp_options")
+        if amp_options is not None:
+            assert isinstance(amp_options, dict)
+            amp_dtype_str = amp_options.get("dtype")
+            assert amp_dtype_str in ["float16", "bfloat16"]
+            self._amp_dtype = getattr(torch, amp_dtype_str)
+            self._grad_scaler = amp.GradScaler()
 
     def init_forward(
         self,
@@ -336,7 +349,8 @@ class Engine(EngineBase):
         data = {k: v.to(self._device) for (k, v) in data.items()}
 
         sentinel_kw = {"__fwd_compatible_random_arg_%i" % int(random() * 100): None}
-        self._train_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
+        with autocast(device_type=self._device, dtype=self._amp_dtype) if self._amp_dtype else nullcontext():
+            self._train_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
 
         losses_dict = run_ctx.losses
         total_loss = run_ctx.total_loss()
@@ -362,7 +376,8 @@ class Engine(EngineBase):
         sentinel_kw = {"__fwd_compatible_random_arg_%i" % int(random() * 100): None}
         # currently we only support the _train_step_func,
         # this can be an optional _eval_step_func later on
-        self._train_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
+        with autocast(device_type=self._device, dtype=self._amp_dtype) if self._amp_dtype else nullcontext():
+            self._train_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
 
         losses_dict = run_ctx.losses
         total_loss = run_ctx.total_loss()
@@ -383,7 +398,8 @@ class Engine(EngineBase):
         sentinel_kw = {"__fwd_compatible_random_arg_%i" % int(random() * 100): None}
         # currently we only support the _train_step_func,
         # this can be an optional _eval_step_func later on
-        self._forward_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
+        with autocast(device_type=self._device, dtype=self._amp_dtype) if self._amp_dtype else nullcontext():
+            self._forward_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
 
     def _load_model(self, *, epoch: int, filename: Optional[str] = None):
         """
