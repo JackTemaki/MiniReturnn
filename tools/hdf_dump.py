@@ -48,29 +48,19 @@ def hdf_close(hdf_dataset):
     hdf_dataset.close()
 
 
-def init(config_filename, cmd_line_opts, dataset_config_str):
+def init(config_filename, cmd_line_opts):
     """
     :param str config_filename: global config for CRNN
     :param list[str] cmd_line_opts: options for init_config method
-    :param str dataset_config_str: dataset via init_dataset_via_str()
     """
     rnn.init_better_exchook()
-    rnn.init_thread_join_hack()
-    if config_filename:
-        rnn.init_config(config_filename, cmd_line_opts)
-        rnn.init_log()
-    else:
-        log.initialize(verbosity=[5])
+    rnn.init_config(config_filename, cmd_line_opts)
+    rnn.init_log()
+
     print("Returnn hdf_dump starting up.", file=log.v3)
     rnn.init_faulthandler()
-    if config_filename:
-        rnn.init_data()
-        rnn.print_task_properties()
-        assert isinstance(rnn.train_data, Dataset)
-        dataset = rnn.train_data
-    else:
-        assert dataset_config_str
-        dataset = init_dataset(dataset_config_str)
+    assert rnn.config.has("train")
+    dataset = init_dataset(rnn.config.typed_value("train"))
     print("Source dataset:", dataset.len_info(), file=log.v3)
     return dataset
 
@@ -100,7 +90,7 @@ def main(argv):
     """
     parser = argparse.ArgumentParser(description="Dump dataset or subset of dataset into external HDF dataset")
     parser.add_argument(
-        "config_file_or_dataset", type=str, help="Config file for RETURNN, or directly the dataset init string"
+        "config_file_or_dataset", type=str, help="Config file for RETURNN, uses 'train' dataset as default"
     )
     parser.add_argument("hdf_filename", type=str, help="File name of the HDF dataset, which will be created")
     parser.add_argument("--start_seq", type=int, default=0, help="Start sequence index of the dataset to dump")
@@ -108,13 +98,9 @@ def main(argv):
     parser.add_argument("--epoch", type=int, default=1, help="Optional start epoch for initialization")
 
     args = parser.parse_args(argv[1:])
-    returnn_config = None
-    dataset_config_str = None
-    if _is_crnn_config(args.config_file_or_dataset):
-        returnn_config = args.config_file_or_dataset
-    else:
-        dataset_config_str = args.config_file_or_dataset
-    dataset = init(config_filename=returnn_config, cmd_line_opts=[], dataset_config_str=dataset_config_str)
+    assert _is_crnn_config(args.config_file_or_dataset)
+    returnn_config = args.config_file_or_dataset
+    dataset = init(config_filename=returnn_config, cmd_line_opts=[])
     hdf_dataset = hdf_dataset_init(args.hdf_filename)
     hdf_dump_from_dataset(dataset, hdf_dataset, args)
     hdf_close(hdf_dataset)
