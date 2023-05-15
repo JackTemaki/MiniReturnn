@@ -415,6 +415,8 @@ class Engine(EngineBase):
         self._model = get_model_func(epoch=epoch, step=step, **sentinel_kw)
         assert isinstance(self._model, torch.nn.Module)
         print("Model:", self._model, file=log.v4)
+        params = sum([parameter.data.size().numel() for parameter in self._model.parameters()])
+        print(f"Total number of parameters: {params}", file=log.v4)
 
         if checkpoint_state is not None:
             self._model.load_state_dict(checkpoint_state["model"])
