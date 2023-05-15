@@ -314,7 +314,7 @@ def execute_main_task():
         assert eval_data is not None, "no eval data provided"
         if config.has("epoch"):
             config.set("load_epoch", config.int("epoch", 0))
-            engine.init_forward(eval_data=eval_data)
+        engine.init_forward(eval_data=eval_data)
         engine.forward()
     elif task == "search":
         raise NotImplementedError("search task is currently not implemented")

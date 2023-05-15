@@ -97,12 +97,12 @@ class Engine(EngineBase):
         for dataset_name, dataset in self.eval_datasets.items():
             self._eval_dataloaders[dataset_name] = self._create_data_loader(dataset)
 
-        self._start_epoch = self.get_train_start_epoch(self.config)
+        self._start_epoch, filename = self.get_epoch_model(self.config)
 
         # for now assume we only do forward within one epoch setting
         self._final_epoch = self._start_epoch
 
-        self._load_model(epoch=self._start_epoch)
+        self._load_model(epoch=self._start_epoch, filename=filename)
 
         self._forward_step_func = self.config.typed_value("forward_step")
         assert self._forward_step_func, "forward_step not defined"
@@ -383,14 +383,19 @@ class Engine(EngineBase):
         # this can be an optional _eval_step_func later on
         self._forward_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
 
-    def _load_model(self, *, epoch: int):
+    def _load_model(self, *, epoch: int, filename: Optional[str]= None):
         """
         Sets self._model to a torch.nn.Module.
 
         :param epoch: e.g. via BaseEngine.get_train_start_epoch()
         """
         checkpoint_state = None
-        if epoch > 1:
+        if filename is not None:
+            print("Load model %s" % (filename,), file=log.v4)
+            checkpoint_state = torch.load(filename + ".pt")
+            step = checkpoint_state["step"]
+            self._start_epoch = self._final_epoch = checkpoint_state["epoch"]
+        elif epoch > 1:
             filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".pt"
             print("Load model %s" % (filename,), file=log.v4)
             checkpoint_state = torch.load(filename)
