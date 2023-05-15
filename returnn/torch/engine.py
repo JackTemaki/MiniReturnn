@@ -51,6 +51,8 @@ class Engine(EngineBase):
         self._save_model_epoch_interval = 1
         self._updater = None  # type: Optional[Updater]
 
+        self.grad_clip_value = self.config.float("gradient_clip", 0.0)
+
         self._device = "cuda" if torch.cuda.is_available() and torch.cuda.device_count() > 0 else "cpu"
         print(f"Using device {self._device}", file=log.v3)
 
@@ -341,6 +343,8 @@ class Engine(EngineBase):
 
         self._updater.get_optimizer().zero_grad()
         total_loss.backward()
+        if self.grad_clip_value > 0.0:
+            torch.nn.utils.clip_grad_value_(self._model.parameters(), self.grad_clip_value)
         self._updater.get_optimizer().step()
 
         return total_loss, losses_dict
@@ -383,7 +387,7 @@ class Engine(EngineBase):
         # this can be an optional _eval_step_func later on
         self._forward_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
 
-    def _load_model(self, *, epoch: int, filename: Optional[str]= None):
+    def _load_model(self, *, epoch: int, filename: Optional[str] = None):
         """
         Sets self._model to a torch.nn.Module.
 
