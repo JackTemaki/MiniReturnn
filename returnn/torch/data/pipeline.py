@@ -192,7 +192,7 @@ class BatchingIterDataPipe(torch.utils.data.IterDataPipe):
     Note, that batches are not yet merged into a single (padded) data array here, this happens in 'collate_batch()'.
     """
 
-    def __init__(self, dataset: torch.utils.data.IterableDataset, batch_size=1, max_seqs=None):
+    def __init__(self, dataset: torch.utils.data.IterableDataset, batch_size=1, max_seqs=None, drop_last=False):
         """
         :param dataset: dataset to apply batching to
         :param int|dict[str,int]|None batch_size: Maximum number of time steps (e.g. audio frames / words) in one
@@ -201,11 +201,13 @@ class BatchingIterDataPipe(torch.utils.data.IterDataPipe):
             If None, no limit.
         :param int|None max_seqs: maximum number of sequences in a batch,
             None means unlimited (also -1 to match TF backend)
+        :param drop_last: if true, drop the last (possibly incomplete) batch.
         """
         super().__init__()
         self._dataset = dataset
         self._max_batch_size = NumbersDict(sys.maxsize if batch_size is None else batch_size)
         self._max_seqs = sys.maxsize if (max_seqs is None or max_seqs == -1) else max_seqs
+        self._drop_last = drop_last
 
         assert self._max_batch_size.min_value() > 0
         assert self._max_seqs > 0
@@ -242,5 +244,5 @@ class BatchingIterDataPipe(torch.utils.data.IterDataPipe):
                 current_batch.append(data_dict)
                 current_max_sequence_lengths = max_sequence_lengths_if_included
 
-        if current_batch:
+        if current_batch and not self._drop_last:
             yield current_batch

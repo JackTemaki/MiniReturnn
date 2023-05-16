@@ -323,7 +323,10 @@ class Engine(EngineBase):
 
         batch_size = self.config.typed_value("batch_size", 1)
         max_seqs = self.config.int("max_seqs", -1)
-        batches_dataset = data_pipeline.BatchingIterDataPipe(wrapped_dataset, batch_size=batch_size, max_seqs=max_seqs)
+        batch_drop_last = self.config.bool("batch_drop_last", False)
+        batches_dataset = data_pipeline.BatchingIterDataPipe(
+            wrapped_dataset, batch_size=batch_size, max_seqs=max_seqs, drop_last=batch_drop_last
+        )
         batches_dataset = dp.iter.Collator(batches_dataset, collate_fn=data_pipeline.collate_batch)
 
         try:
