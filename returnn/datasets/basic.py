@@ -21,6 +21,7 @@ from typing import Optional, Union, Type, Dict, List
 
 from returnn.datasets.util.vocabulary import Vocabulary
 from returnn.util.basic import try_run, NumbersDict, OptionalNotImplementedError
+from returnn.log import log
 
 
 class Dataset(object):
@@ -931,6 +932,10 @@ def init_dataset(kwargs, extra_kwargs=None, default_kwargs=None):
     obj = clazz(**kwargs)
     assert isinstance(obj, Dataset)
     obj.initialize()
+    print(f"Initialized Dataset f{kwargs.get('name', '<unknown_name>')}")
+    print("  input:", obj.num_inputs, file=log.v2)
+    print("  output:", obj.num_outputs, file=log.v2)
+    print(" ", obj.len_info() or "no info", file=log.v2)
     return obj
 
 
