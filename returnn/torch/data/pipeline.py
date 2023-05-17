@@ -51,9 +51,12 @@ def create_tensor(value: InputType) -> OutputType:
     return torch.tensor(value)
 
 
-def collate_batch(batch: List[Dict[str, numpy.ndarray]]) -> Dict[str, torch.Tensor]:
+def collate_batch(batch: List[Dict[str, InputType]], device: str = "cpu") -> Dict[str, OutputType]:
     """
-    :param batch:
+    Use with `functools.partial` to set the device!
+
+    :param batch: the batch as list to collate into single Tensors
+    :param device: the target device to move the Tensor to
     """
     assert isinstance(batch, list)
     assert batch, "batch is empty?"
@@ -74,8 +77,8 @@ def collate_batch(batch: List[Dict[str, numpy.ndarray]]) -> Dict[str, torch.Tens
                 res["%s:size%i" % (key, i + 1)] = torch.tensor([v.shape[i] for v in ls])
         else:
             padded = torch.stack(ls)
-        res[key] = padded
-        res["%s:size0" % key] = torch.tensor(len(ls))
+        res[key] = padded.to(device)
+        res["%s:size0" % key] = torch.tensor(len(ls)).to(device)
 
     return res
 

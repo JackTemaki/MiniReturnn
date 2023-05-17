@@ -3,6 +3,7 @@ Main engine for PyTorch
 """
 
 from __future__ import annotations
+from functools import partial
 from typing import Optional, Callable, Dict, Tuple
 from contextlib import nullcontext
 
@@ -327,7 +328,9 @@ class Engine(EngineBase):
         batches_dataset = data_pipeline.BatchingIterDataPipe(
             wrapped_dataset, batch_size=batch_size, max_seqs=max_seqs, drop_last=batch_drop_last
         )
-        batches_dataset = dp.iter.Collator(batches_dataset, collate_fn=data_pipeline.collate_batch)
+        batches_dataset = dp.iter.Collator(
+            batches_dataset, collate_fn=partial(data_pipeline.collate_batch, device=self._device)
+        )
 
         try:
             return DataLoader2(batches_dataset)
@@ -346,11 +349,6 @@ class Engine(EngineBase):
         :return: total loss (weighted sum) calculated for the step, and individual losses as a name -> value mapping
         """
         assert isinstance(data, dict) and data
-        # move all data to the target device as default
-        # note that in some cases, e.g. for using rnn.pack_padded_sequence you need to have
-        # length tensors on CPU
-        data = {k: v.to(self._device) for (k, v) in data.items()}
-
         sentinel_kw = {"__fwd_compatible_random_arg_%i" % int(random() * 100): None}
         with autocast(device_type=self._device, dtype=self._amp_dtype) if self._amp_dtype else nullcontext():
             self._train_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
@@ -371,11 +369,6 @@ class Engine(EngineBase):
         :return: total loss (weighted sum) calculated for the step, and individual losses as a name -> value mapping
         """
         assert isinstance(data, dict) and data
-        # move all data to the target device as default
-        # note that in some cases, e.g. for using rnn.pack_padded_sequence you need to have
-        # length tensors on CPU
-        data = {k: v.to(self._device) for (k, v) in data.items()}
-
         sentinel_kw = {"__fwd_compatible_random_arg_%i" % int(random() * 100): None}
         # currently we only support the _train_step_func,
         # this can be an optional _eval_step_func later on
@@ -393,11 +386,6 @@ class Engine(EngineBase):
         :param run_ctx: the current run ctx object
         """
         assert isinstance(data, dict) and data
-        # move all data to the target device as default
-        # note that in some cases, e.g. for using rnn.pack_padded_sequence you need to have
-        # length tensors on CPU
-        data = {k: v.to(self._device) for (k, v) in data.items()}
-
         sentinel_kw = {"__fwd_compatible_random_arg_%i" % int(random() * 100): None}
         # currently we only support the _train_step_func,
         # this can be an optional _eval_step_func later on
