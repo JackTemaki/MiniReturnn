@@ -78,6 +78,8 @@ class ReturnnDatasetIterDataPipe(torch.utils.data.IterDataPipe):
         while self._dataset.is_less_than_num_seqs(seq_index):
             self._dataset.load_seqs(seq_index, seq_index + 1)
             data = {data_key: self._dataset.get_data(seq_index, data_key) for data_key in data_keys}
+            data["seq_idx"] = seq_index
+            data["seq_tag"] = self._dataset.get_tag(seq_index)
             yield data
             seq_index += 1
 

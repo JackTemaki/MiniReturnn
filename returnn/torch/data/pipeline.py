@@ -19,28 +19,36 @@ other PyTorch datasets more directly, including also HuggingFace datasets.
 """
 
 from __future__ import annotations
-from typing import List, Dict
+from typing import Dict, Iterable, List, Union
 import sys
 from copy import deepcopy
 
-import numpy
+import numpy as np
 import torch
 import torch.utils.data
 
 from returnn.util.basic import NumbersDict
 
+InputType = Union[np.ndarray, int, str, float, bool]
+OutputType = Union[torch.Tensor, int, str, float, bool]
 
-def create_tensor(array: numpy.ndarray) -> torch.Tensor:
-    """
-    Adjust non-supported dtypes
 
-    :param array: numpy array to be converted
+def create_tensor(value: InputType) -> OutputType:
     """
+    Only returnn np.ndarray values as tensor, and adjust non-supported dtypes
+
+    Other formats, such as "int" (e.g. seq_idx) or "str" (e.g. seq_tag) are returned as is.
+
+    :param value: e.g. np.ndarray to be converted
+    """
+    if not isinstance(value, np.ndarray):
+        return value
+
     # The only supported PyTorch dtypes are:
     # float64, float32, float16, complex64, complex128, int64, int32, int16, int8, uint8, and bool.
-    if array.dtype == numpy.uint32:
-        array = numpy.asarray(array, dtype=numpy.int64)
-    return torch.tensor(array)
+    if value.dtype == np.uint32:
+        value = np.asvalue(value, dtype=np.int64)
+    return torch.tensor(value)
 
 
 def collate_batch(batch: List[Dict[str, numpy.ndarray]]) -> Dict[str, torch.Tensor]:
@@ -55,6 +63,10 @@ def collate_batch(batch: List[Dict[str, numpy.ndarray]]) -> Dict[str, torch.Tens
     res = {}
     for key in data_keys:
         ls = [create_tensor(sample[key]) for sample in batch]
+        if not isinstance(ls[0], torch.Tensor):
+            # no padding for non-Tensor types
+            res[key] = ls
+            continue
         num_axis = len(ls[0].size())
         if num_axis > 0:
             padded = torch.nn.utils.rnn.pad_sequence(ls, batch_first=True, padding_value=0)
@@ -88,17 +100,14 @@ class ChunkingIterDataPipe(torch.utils.data.IterDataPipe):
             have to be considered.)
         """
         super().__init__()
-        from returnn.datasets.basic import Dataset as ReturnnDataset
-
         self._dataset = dataset
         # noinspection PyProtectedMember
         self._chunk_size, self._chunk_step, custom_chunk_func = self._parse_chunking(chunking)
         assert not custom_chunk_func, f"Custom chunking function not supported, {chunking!r}"
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[List[Dict[str, InputType]]]:
         """
         :return: generator providing chunks in the form of a dict data_key -> data chunk
-        :rtype: Iterable[dict[str, numpy.ndarray]]
         """
         chunking_data_keys = list(self._chunk_size.keys())
 
@@ -106,6 +115,10 @@ class ChunkingIterDataPipe(torch.utils.data.IterDataPipe):
 
             if not chunking_data_keys:
                 chunking_data_keys = list(data_dict.keys())  # use all if not configured separately
+                # TODO: for now explicit removal of seq_tag and seq_idx, we might want
+                # to have only explicit chunking keys instead
+                chunking_data_keys.remove("seq_tag")
+                chunking_data_keys.remove("seq_idx")
                 assert chunking_data_keys, "Dataset produced sequence without any data."
 
             data_chunks = {}
@@ -212,11 +225,10 @@ class BatchingIterDataPipe(torch.utils.data.IterDataPipe):
         assert self._max_batch_size.min_value() > 0
         assert self._max_seqs > 0
 
-    def __iter__(self):
+    def __iter__(self) -> Iterable[List[Dict[str, InputType]]]:
         """
         :return: generator providing batches in the form of lists of sequences, where each sequence is a dict
           data_key -> data_array.
-        :rtype: Iterable[list[dict[str, numpy.ndarray]]]
         """
         current_batch = []
         current_max_sequence_lengths = NumbersDict(0)  # data_key -> length of longest sequence in current batch
@@ -230,7 +242,10 @@ class BatchingIterDataPipe(torch.utils.data.IterDataPipe):
             # TODO: This assumes all data has time as first dimension. Currently we can't know better..
             # Scalars are treated as length 1
             sequence_lengths = NumbersDict(
-                {data_key: (data.shape[0] if len(data.shape) > 0 else 1) for data_key, data in data_dict.items()}
+                {
+                    data_key: (data.shape[0] if isinstance(data, np.ndarray) and len(data.shape) > 0 else 1)
+                    for data_key, data in data_dict.items()
+                }
             )
 
             max_sequence_lengths_if_included = NumbersDict.max([current_max_sequence_lengths, sequence_lengths])
