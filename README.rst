@@ -24,7 +24,8 @@ Removed features:
 
 Changed behavior:
  - The data to the actual step function in the config is passed as PyTorch tensor dict instead of Frontend Tensors
-   - Axis information is automatically added as <data_name>:axis<idx> entry starting from 0 = batch axis
+   - Axis information is automatically added as `<data_name>:size<idx>` entry starting from 0 = batch axis
+   - Axis information is always placed on the target device
  - The Loss class has less parameters, e.g. `use_normalization` does not exist, and the behavior is always true.
    -  Also determining the inverse norm factor automatically is not possible, it has to be provided explictly
  - The Engine API is regarding step functions is structured slightly differently
