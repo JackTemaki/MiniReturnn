@@ -404,7 +404,7 @@ class Engine(EngineBase):
             checkpoint_state = torch.load(filename + ".pt")
             step = checkpoint_state["step"]
             self._start_epoch = self._final_epoch = checkpoint_state["epoch"]
-        elif epoch > 1:
+        elif epoch is not None and epoch > 1:
             filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".pt"
             print("Load model %s" % (filename,), file=log.v4)
             checkpoint_state = torch.load(filename)
