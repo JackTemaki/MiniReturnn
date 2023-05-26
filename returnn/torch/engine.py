@@ -13,7 +13,7 @@ import torch
 import torch.utils.data.datapipes as dp
 from torch import autocast, Tensor
 from torch.cuda import amp
-from torchdata.dataloader2 import DataLoader2
+from torch.utils.data import DataLoader
 from random import random
 
 from returnn.config import Config
@@ -42,9 +42,9 @@ class Engine(EngineBase):
         self.model_filename = self.config.value("model", None)
         self._mp_manager = torch.multiprocessing.Manager()
         self._epoch_mp_shared = self._mp_manager.Value("i", 0)
-        self._train_dataloader = None  # type: Optional[DataLoader2]
-        self._forward_dataloader = None  # type: Optional[DataLoader2]
-        self._eval_dataloaders = {}  # type: Dict[str, DataLoader2]
+        self._train_dataloader = None  # type: Optional[DataLoader]
+        self._forward_dataloader = None  # type: Optional[DataLoader]
+        self._eval_dataloaders = {}  # type: Dict[str, DataLoader]
 
         self._start_epoch = None  # type: Optional[int]
         self._final_epoch = None  # type: Optional[int]
@@ -305,7 +305,7 @@ class Engine(EngineBase):
             file=log.v3,
         )
 
-    def _create_data_loader(self, dataset: Dataset) -> DataLoader2:
+    def _create_data_loader(self, dataset: Dataset) -> DataLoader:
         """
         :param dataset: RETURNN dataset
         :return: PyTorch data loader created from given RETURNN dataset
@@ -332,15 +332,7 @@ class Engine(EngineBase):
             batches_dataset, collate_fn=partial(data_pipeline.collate_batch, device=self._device)
         )
 
-        try:
-            return DataLoader2(batches_dataset)
-        except TypeError as exc:
-            try:
-                # noinspection PyPackageRequirements
-                import dill
-            except ImportError:
-                raise ModuleNotFoundError("Possible type error in DataLoader2 due to missing module 'dill'") from exc
-            raise
+        return DataLoader(dataset=batches_dataset, batch_size=None, num_workers=1, multiprocessing_context="spawn")
 
     def run_train_step(self, data: dict[str, torch.Tensor], run_ctx: RunCtx) -> Tuple[Tensor, Dict[str, Loss]]:
         """
