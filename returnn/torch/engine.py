@@ -51,8 +51,13 @@ class Engine(EngineBase):
         self._save_model_epoch_interval = 1
         self._updater = None  # type: Optional[Updater]
 
-        self._device = "cuda" if config.typed_value("device") == "gpu" and (torch.cuda.is_available() and torch.cuda.device_count() > 0) else "cpu"
-        assert (self._device == "cuda" and config.typed_value("device") == "gpu") or config.typed_value(
+        device = config.typed_value("device")
+        if (device == "gpu"):
+            print("Use of deprecated keyword 'gpu' to set device. Using 'cuda' instead.")
+            device = "cuda"
+
+        self._device = device
+        assert (self._device == "cuda" and torch.cuda.is_available() and torch.cuda.device_count() > 0) or config.typed_value(
             "device"
         ) == "cpu", f"Config requests GPU, but CUDA is not available or there are no visilbe devices.\nCUDA available: {torch.cuda.is_available()}\nVisible CUDA devices: {torch.cuda.device_count()}"
         print(f"Using device {self._device}", file=log.v3)
