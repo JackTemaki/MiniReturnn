@@ -150,7 +150,7 @@ def returnn_greeting(config_filename=None, command_line_options=None):
     :param list[str]|None command_line_options:
     """
     print(
-        "RETURNN starting up, version %s, date/time %s, pid %i, cwd %s, Python %s"
+        "Mini-RETURNN starting up, version %s, date/time %s, pid %i, cwd %s, Python %s"
         % (
             util.describe_returnn_version(),
             time.strftime("%Y-%m-%d-%H-%M-%S (UTC%z)"),

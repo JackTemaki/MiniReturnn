@@ -43,7 +43,10 @@ def main():
     # as this would result in a version which can be bigger than what we actually have,
     # so this would not be useful at all.
     long_version = get_version_str(verbose=True, fallback="1.0.0+setup-fallback-version", long=True)
-    version = long_version[: long_version.index("+")]
+    if "+" in long_version:
+        version = long_version[: long_version.index("+")]
+    else:
+        version = long_version
 
     if os.environ.get("DEBUG", "") == "1":
         debug_print_file(".")
@@ -61,7 +64,7 @@ def main():
             # Currently the setup will ignore all other data except in returnn/.
             # At least make the version available.
             shutil.copy("PKG-INFO", "returnn/")
-            shutil.copy("_setup_info_generated.py", "returnn/")
+            shutil.copy("returnn/")
             # Just using package_data = ["*"] would only take files from current dir.
             package_data = []
             for root, dirs, files in os.walk("."):
@@ -69,10 +72,7 @@ def main():
                     package_data.append(os.path.join(root, file))
     else:
         print("dummy package_data, does not matter, likely you are running sdist")
-        with open("_setup_info_generated.py", "w") as f:
-            f.write("version = %r\n" % version)
-            f.write("long_version = %r\n" % long_version)
-        package_data = ["MANIFEST", "_setup_info_generated.py"]
+        package_data = ["MANIFEST"]
 
     from distutils.core import setup
 
