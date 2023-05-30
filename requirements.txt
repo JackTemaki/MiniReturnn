@@ -2,3 +2,6 @@ numpy
 h5py
 typing
 better-exchook
+torch>=1.13.0
+
+

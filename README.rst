@@ -31,8 +31,7 @@ Changed behavior:
  - The Engine API is regarding step functions is structured slightly differently
  - Step-logging is slightly differently
  - Overriding the Engine by declaring a ``CustomEngine`` in the config is possible, see https://github.com/rwth-i6/returnn/pull/1306 for a discussion on this.
- - ``weight_decay`` is applied to ALL parameters without exception, some discussion in https://github.com/rwth-i6/returnn/issues/1319,
-    although the conclusion that the mainline RETURNN behavior can be non-deterministic was not reached there.
+ - ``weight_decay`` is applied to ALL parameters without exception, some discussion in https://github.com/rwth-i6/returnn/issues/1319 , although the conclusion that the mainline RETURNN behavior can be non-deterministic was not reached there.
  - Always uses the cache-manager if available, even when not running in cluster
 
 
@@ -44,3 +43,12 @@ Added features that are likely to appear in mainline-RETURNN:
 Experimental features that might not be needed:
  - ``batching_drop_last`` config parameter to discard the last incomplete batch in an epoch
  - forward init/finish hooks that can be used to attach custom objects to the run_ctx
+
+
+Installation
+------------
+
+PyTorch >= 1.13 is recommended, but might not be strictly necessary.
+You can use the `requirements.txt` file to install all strictly necessary packages.
+Additional packages might be required for certain features, which can be installed using ``requirements-optional.txt`.
+
