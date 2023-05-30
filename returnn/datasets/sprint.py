@@ -538,16 +538,6 @@ class SprintDatasetBase(Dataset):
                 raise NotImplementedError
             return self.next_seq_to_be_added
 
-    def have_seqs(self):
-        """
-        :rtype: bool
-        """
-        with self.lock:
-            if self.next_seq_to_be_added > 0:
-                return True
-            self._wait_for_seq(0)
-            return self.next_seq_to_be_added > 0
-
     def is_less_than_num_seqs(self, n):
         """
         :param int n:

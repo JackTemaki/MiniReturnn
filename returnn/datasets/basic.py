@@ -499,12 +499,6 @@ class Dataset(object):
         assert self.num_outputs
         self.init_seq_order()
 
-    def get_times(self, sorted_seq_idx):
-        """
-        :param int sorted_seq_idx:
-        """
-        raise OptionalNotImplementedError
-
     def get_data(self, seq_idx, key) -> numpy.ndarray:
         """
         :param int seq_idx: sorted seq idx
@@ -725,17 +719,6 @@ class Dataset(object):
         if self.is_data_sparse(key):
             return []
         return [self.get_data_dim(key)]
-
-    def have_seqs(self) -> bool:
-        """
-        :return: whether num_seqs > 0
-        """
-        try:
-            total_num_seqs = self.get_total_num_seqs()
-            return total_num_seqs > 0
-        except NotImplementedError:
-            pass
-        return self.is_less_than_num_seqs(0)
 
     def len_info(self):
         """
