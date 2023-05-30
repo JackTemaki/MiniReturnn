@@ -170,9 +170,6 @@ class GeneratingDataset(Dataset):
         """
         raise NotImplementedError
 
-    def _shuffle_frames_in_seqs(self, start, end):
-        assert False, "Shuffling in GeneratingDataset does not make sense."
-
     def get_num_timesteps(self):
         """
         :rtype: int

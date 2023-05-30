@@ -515,9 +515,6 @@ class SprintDatasetBase(Dataset):
             self.ready_for_data = False
             self.cond.notify_all()
 
-    def _shuffle_frames_in_seqs(self, start, end):
-        assert False, "Shuffling in SprintDataset only via Sprint at the moment."
-
     def get_num_timesteps(self):
         """
         :rtype: int

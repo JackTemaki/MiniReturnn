@@ -251,9 +251,6 @@ class Dataset(object):
         assert start < self.num_seqs
         return start, end
 
-    def _shuffle_frames_in_seqs(self, start, end):
-        raise OptionalNotImplementedError
-
     def _load_seqs(self, start, end):
         """
         Load data sequences.

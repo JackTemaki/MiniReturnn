@@ -252,36 +252,6 @@ class CachedDataset(Dataset):
         super(CachedDataset, self).load_seqs(start, end)
         self.preload_end = self.num_seqs_cached_at_start
 
-    def _shuffle_frames_in_seqs(self, start, end):
-        """
-        :type start: int
-        :type end: int
-        """
-        assert start < end
-        assert self.is_cached(start, end)
-        alloc_idx = self.alloc_interval_index(start)
-        alloc_start, alloc_end, alloc_data = self.alloc_intervals[alloc_idx]
-        assert start >= alloc_start
-        assert end <= alloc_end
-        rnd = numpy.random.RandomState(start)  # Some deterministic way to shuffle!
-        num_frames = self._seq_start[end][0] - self._seq_start[start][0]
-        assert num_frames > 0
-        perm = rnd.permutation(num_frames)
-        alloc_offset = self._seq_start[start][0] - self._seq_start[alloc_start][0]
-        assert alloc_offset + num_frames <= alloc_data.shape[0]
-        # Permute alloc_data.
-        data = alloc_data[alloc_offset : alloc_offset + num_frames]
-        alloc_data[alloc_offset : alloc_offset + num_frames] = data[perm]
-        # Permute targets.
-        for k in self.targets:
-            idx = self.target_keys.index(k) + 1
-            targets = self.targets[k][self._seq_start[idx] : self._seq_start[start][idx] + num_frames]
-            self.targets[k][
-                self._seq_start[start][idx] : self._seq_start[start][idx]
-                + self._seq_start[end][idx]
-                - self._seq_start[start][idx]
-            ] = targets[perm]
-
     def _set_alloc_intervals_data(self, idc, data):
         """
         :param int idc: index of sorted seq idx
