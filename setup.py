@@ -32,7 +32,7 @@ pip3 install --user dist/*.tar.gz -v
 
 import os
 import shutil
-from returnn.__setup__ import get_version_str, debug_print_file
+from returnn.__setup__ import get_version_str
 
 
 def main():
@@ -42,18 +42,11 @@ def main():
     # Do not use current time as fallback for the version anymore,
     # as this would result in a version which can be bigger than what we actually have,
     # so this would not be useful at all.
-    long_version = get_version_str(verbose=True, fallback="1.0.0+setup-fallback-version", long=True)
+    long_version = get_version_str()
     if "+" in long_version:
         version = long_version[: long_version.index("+")]
     else:
         version = long_version
-
-    if os.environ.get("DEBUG", "") == "1":
-        debug_print_file(".")
-        debug_print_file("PKG-INFO")
-        debug_print_file("pip-egg-info")
-        debug_print_file("pip-egg-info/returnn.egg-info")
-        debug_print_file("pip-egg-info/returnn.egg-info/SOURCES.txt")  # like MANIFEST
 
     if os.path.exists("PKG-INFO"):
         if os.path.exists("MANIFEST"):

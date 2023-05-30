@@ -15,21 +15,6 @@ _my_dir = os.path.dirname(os.path.abspath(__file__))
 _root_dir = os.path.dirname(os.path.realpath(_my_dir))
 
 
-def debug_print_file(fn):
-    """
-    :param str fn:
-    """
-    print("%s:" % fn)
-    if not os.path.exists(fn):
-        print("<does not exist>")
-        return
-    if os.path.isdir(fn):
-        print("<dir:>")
-        pprint(sorted(os.listdir(fn)))
-        return
-    print(open(fn).read())
-
-
 def git_rev_version(git_dir=_root_dir):
     """
     :param str git_dir:
@@ -37,6 +22,7 @@ def git_rev_version(git_dir=_root_dir):
     :rtype: str
     """
     from returnn.util.basic import git_commit_rev, git_is_dirty
+
     rev = git_commit_rev(git_dir=git_dir)
     version = VERSION + ".%s" % rev
     if git_is_dirty(git_dir=git_dir):
