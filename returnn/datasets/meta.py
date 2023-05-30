@@ -220,7 +220,6 @@ class MetaDataset(CachedDataset2):
         :param dict[str,str] data_dtypes: self-data-key -> dtype. Read from data if not specified.
         """
         super(MetaDataset, self).__init__(**kwargs)
-        assert self.shuffle_frames_of_nseqs == 0  # not implemented. anyway only for non-recurrent nets
 
         self.data_map = data_map
         self.dataset_keys = set([m[0] for m in self.data_map.values()])  # type: typing.Set[str]

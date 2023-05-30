@@ -141,7 +141,6 @@ class SprintDatasetBase(Dataset):
         self.sprint_finalized = False
         self._target_black_list = []  # if we get non numpy arrays and cannot convert them
         self._reset_cache()
-        assert self.shuffle_frames_of_nseqs == 0  # Currently broken. But just use Sprint itself to do this.
 
     def use_multiple_epochs(self):
         """

@@ -34,7 +34,6 @@ class GeneratingDataset(Dataset):
         :param int|float num_seqs:
         """
         super(GeneratingDataset, self).__init__(**kwargs)
-        assert self.shuffle_frames_of_nseqs == 0
 
         self._input_dim = input_dim
         self._output_dim = output_dim

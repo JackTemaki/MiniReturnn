@@ -49,7 +49,6 @@ class Dataset(object):
         seq_list_filter_file=None,
         unique_seq_tags=False,
         seq_order_seq_lens_file=None,
-        shuffle_frames_of_nseqs=0,
         estimated_num_seqs=None,
     ):
         """
@@ -70,7 +69,6 @@ class Dataset(object):
         :param str|None seq_list_filter_file: defines a subset of sequences (by tag) to use
         :param bool unique_seq_tags: uniquify seqs with same seq tags in seq order
         :param str|None seq_order_seq_lens_file: for seq order, use the seq length given by this file
-        :param int shuffle_frames_of_nseqs: shuffles the frames. not always supported
         :param None|int estimated_num_seqs: for progress reporting in case the real num_seqs is unknown
         """
         self.name = name or ("dataset_id%s" % id(self))
@@ -101,7 +99,6 @@ class Dataset(object):
         self._num_timesteps = 0
         self._num_seqs = 0
         self._estimated_num_seqs = estimated_num_seqs
-        self.shuffle_frames_of_nseqs = shuffle_frames_of_nseqs
         self.epoch = None
 
     def __repr__(self):
@@ -239,15 +236,7 @@ class Dataset(object):
         if self.is_cached(start, end):
             return
 
-        if self.shuffle_frames_of_nseqs > 0:
-            # We always load N seqs at once and shuffle all their frames.
-            start, end = self._get_load_seqs_superset(start, end)
-            self._load_seqs(start, end)
-            while start < end:
-                self._shuffle_frames_in_seqs(start, start + self.shuffle_frames_of_nseqs)
-                start += self.shuffle_frames_of_nseqs
-        else:
-            self._load_seqs(start, end)
+        self._load_seqs(start, end)
 
     def _get_load_seqs_superset(self, start, end):
         """
@@ -260,10 +249,6 @@ class Dataset(object):
         """
         assert start <= end
         assert start < self.num_seqs
-        if self.shuffle_frames_of_nseqs > 0:
-            m = self.shuffle_frames_of_nseqs
-            start -= start % m
-            end += (m - (end % m)) % m
         return start, end
 
     def _shuffle_frames_in_seqs(self, start, end):
