@@ -98,25 +98,6 @@ Contains code from albertz-system-tools:
  - Copyright Albert Zeyer
  - Various functions in Util.py.
 
-Contains code from Lasagne:
- - Website: https://github.com/Lasagne/Lasagne
- - MIT License (MIT)
- - Copyright (c) 2014-2015 Lasagne contributors
- - Various functions in TheanoUtil.py.
-
-Contains code from TensorFlow:
- - Website: https://github.com/tensorflow/tensorflow
- - Apache License 2.0
- - Copyright 2017 The TensorFlow Authors. All rights reserved.
- - Various functions in TFUtil.py, TFUpdater.py.
- - graph_editor from contrib.
-
-Contains code from pumpikano-tf-dann:
- - Website: https://github.com/pumpikano/tf-dann
- - MIT License
- - Copyright Clayton Mellina
- - Function FlipGradientBuilder in TFUtil.py.
-
 Contains code from tensorpack:
  - Website: https://github.com/ppwwyyxx/tensorpack
  - Apache License 2.0
@@ -140,12 +121,6 @@ Contains code from keithito-tacotron:
  - MIT License (MIT)
  - Copyright (c) 2017 Keith Ito
  - Some code in LmDataset.py.
-
-Contains code from Tacotron-2:
- - Website: https://github.com/Rayhane-mamah/Tacotron-2
- - MIT License (MIT)
- - Copyright (c) 2018 Rayhane Mama
- - ZoneoutLSTMCell in TFNetworkRecLayer.py
 
 Contains code from literal-python-to-pickle:
  - Website: https://github.com/albertz/literal-python-to-pickle
