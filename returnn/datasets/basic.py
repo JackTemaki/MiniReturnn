@@ -20,7 +20,7 @@ import typing
 from typing import Optional, Union, Type, Dict, List
 
 from returnn.datasets.util.vocabulary import Vocabulary
-from returnn.util.basic import try_run, NumbersDict, OptionalNotImplementedError
+from returnn.util.basic import try_run, NumbersDict, OptionalNotImplementedError, cf
 from returnn.log import log
 
 
@@ -163,17 +163,13 @@ class Dataset(object):
         return 0
 
     @staticmethod
-    def _load_seq_list_file(filename, use_cache_manager=False, expect_list=True):
+    def _load_seq_list_file(filename, expect_list=True):
         """
         :param str filename:
-        :param bool use_cache_manager:
         :param bool expect_list:
         :rtype: list[str]|dict[str,list[str]]
         """
-        if use_cache_manager:
-            import returnn.util.basic
-
-            filename = returnn.util.basic.cf(filename)
+        filename = cf(filename)
         if filename.endswith(".pkl"):
             import pickle
 
