@@ -388,22 +388,29 @@ class Engine(EngineBase):
         """
         Sets self._model to a torch.nn.Module.
 
+        In case of running on CPU we move all objects to the CPU,
+        otherwise we keep the original assignment.
+
         :param epoch: e.g. via BaseEngine.get_train_start_epoch()
         """
         checkpoint_state = None
         if filename is not None:
             print("Load model %s" % (filename,), file=log.v4)
-            checkpoint_state = torch.load(filename + ".pt")
+            checkpoint_state = torch.load(
+                filename + ".pt", map_location=torch.device("cpu") if self._device == "cpu" else None
+            )
             step = checkpoint_state["step"]
             self._start_epoch = self._final_epoch = checkpoint_state["epoch"]
         elif epoch is not None and epoch > 1:
             filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".pt"
             print("Load model %s" % (filename,), file=log.v4)
-            checkpoint_state = torch.load(filename)
+            checkpoint_state = torch.load(filename, map_location=torch.device("cpu") if self._device == "cpu" else None)
             assert checkpoint_state["epoch"] == epoch - 1
             step = checkpoint_state["step"]
         else:
             step = 0
+            # TODO: the epoch handling might still be inconsistent
+            epoch = 1
         self._train_step = step
 
         random_seed = self.config.int("random_seed", 42)
