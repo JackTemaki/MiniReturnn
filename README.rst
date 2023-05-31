@@ -31,14 +31,18 @@ Changed behavior:
  - The Engine API is regarding step functions is structured slightly differently
  - Step-logging is slightly differently
  - Overriding the Engine by declaring a ``CustomEngine`` in the config is possible, see https://github.com/rwth-i6/returnn/pull/1306 for a discussion on this.
- - ``weight_decay`` is applied to ALL parameters without exception, some discussion in https://github.com/rwth-i6/returnn/issues/1319 , although the conclusion that the mainline RETURNN behavior can be non-deterministic was not reached there.
+ - ``weight_decay`` is applied to ALL parameters without exception, some discussion in https://github
+.com/rwth-i6/returnn/issues/1319 ,
+    although the conclusion that the mainline RETURNN behavior can be non-deterministic was not reached there.
  - Always uses the cache-manager if available, even when not running in cluster
+ - Dataloader2 from ``torchdata`` was replaced by Dataloader from ``torch.utils.data``, as Dataloader2 has a non-stable API. In addition, num_workers=1 with "spawn" multiprocessing is set. This means that an extra process loads the data, and prefetch is working correctly, resulting in significant speedups.
 
 
 Added features that are likely to appear in mainline-RETURNN:
  - Checkpoint cleanup, currently pending for mainline RETURNN in https://github.com/rwth-i6/returnn/pull/1316
  - seq_tag, seq_idx and non-Tensor data support in the data pipeline, pending at: https://github.com/rwth-i6/returnn/pull/1330
  - Forwarding as task for the PyTorch Engine
+
 
 Experimental features that might not be needed:
  - ``batching_drop_last`` config parameter to discard the last incomplete batch in an epoch
