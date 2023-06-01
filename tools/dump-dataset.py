@@ -244,7 +244,7 @@ def init(config_str, config_dataset, verbosity):
     else:
         print("Use train dataset from config.")
         assert config.value("train", None)
-        dataset = init_dataset(config.value("train", None)) #TODO: init_dataset with str argument is no longer allowed
+        dataset = init_dataset(config.value("train", None))
     rnn.init_log()
     print("Returnn dump-dataset starting up.", file=log.v2)
     rnn.returnn_greeting()
