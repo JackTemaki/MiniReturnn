@@ -916,7 +916,7 @@ def init_dataset(kwargs, extra_kwargs=None, default_kwargs=None):
         if kwargs.startswith("{"):
             kwargs = eval(kwargs)
         else:
-            assert ValueError("Defining datasets via string is no longer allowed")
+            raise ValueError("Defining datasets via string is no longer allowed")
     assert isinstance(kwargs, dict)
     kwargs = kwargs.copy()
     assert "class" in kwargs
