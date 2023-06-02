@@ -217,7 +217,6 @@ def init(config_str, config_dataset, verbosity):
     """
     global dataset
     rnn.init_better_exchook()
-    rnn.init_thread_join_hack()
     dataset_dict = None
     config_filename = None
     if config_str.strip().startswith("{"):
@@ -245,13 +244,13 @@ def init(config_str, config_dataset, verbosity):
     else:
         print("Use train dataset from config.")
         assert config.value("train", None)
-        dataset = init_dataset("config:train")
+        dataset = init_dataset(config.value("train", None))
     rnn.init_log()
     print("Returnn dump-dataset starting up.", file=log.v2)
     rnn.returnn_greeting()
     rnn.init_faulthandler()
     print("Dataset:", file=log.v2)
-    print("  input:", dataset.num_inputs, "x", dataset.window, file=log.v2)
+    print("  input:", dataset.num_inputs, file=log.v2)
     print("  output:", dataset.num_outputs, file=log.v2)
     print(" ", dataset.len_info() or "no info", file=log.v2)
 
