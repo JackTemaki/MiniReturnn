@@ -7,12 +7,14 @@ or forwarding loop.
 """
 
 from __future__ import annotations
-from typing import Optional, Union, Dict
+from typing import Optional, Union, Dict, TYPE_CHECKING
 from dataclasses import dataclass
 
 import torch
 from torch import Tensor
 
+if TYPE_CHECKING:
+    from .engine import Engine
 
 __all__ = ["RunCtx", "Loss", "get_run_ctx", "init_train_step_run_ctx", "init_forward_step_run_ctx"]
 
@@ -28,20 +30,20 @@ def reset_run_ctx():
     _run_ctx = None
 
 
-def init_train_step_run_ctx(device: str):
+def init_train_step_run_ctx(device: str, engine: Engine):
     """
     Call this at the beginning of a new train step.
     """
     global _run_ctx
-    _run_ctx = RunCtx(stage="train_step", device=device)
+    _run_ctx = RunCtx(stage="train_step", device=device, engine=Engine)
 
 
-def init_forward_step_run_ctx(device: str):
+def init_forward_step_run_ctx(device: str, engine: Engine):
     """
     Call this at the beginning of a new forward step.
     """
     global _run_ctx
-    _run_ctx = RunCtx(stage="forward_step", device=device)
+    _run_ctx = RunCtx(stage="forward_step", device=device, engine=Engine)
 
 
 def get_run_ctx() -> RunCtx:
@@ -63,20 +65,25 @@ class RunCtx:
     or forwarding loop (doing recog, beam search, dumping whatever, ...).
 
     In training/eval, we expect that some loss is being defined via mark_as_loss().
-    In forwarding, we expect that some output is being defined via mark_as_output().
     """
 
-    def __init__(self, *, device: str, stage: str):
+    def __init__(self, *, device: str, stage: str, engine: Engine):
         """
         :param device:
         :param stage:
             - "init"
             - "train_step", also for eval, for mark_as_loss and get_total_loss
             - "forward_step", for mark_as_output
+        :param engine: reference to the engine
         """
         self.device = device
         self.stage = stage
+        self._engine = engine
         self.losses: Dict[str, Loss] = {}
+
+    @property
+    def engine(self):
+        return self._engine
 
     def init_step(self):
         """ """

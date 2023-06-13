@@ -163,7 +163,7 @@ class Engine(EngineBase):
         epoch_start_time = time.time()
 
         self._model.train()
-        init_train_step_run_ctx(device=self._device)
+        init_train_step_run_ctx(device=self._device, engine=self)
 
         accumulated_losses_dict = NumbersDict()
         accumulated_inv_norm_dict = NumbersDict()
@@ -216,7 +216,7 @@ class Engine(EngineBase):
         Runs model on all eval datasets and calculates the loss.
         """
         self._model.eval()
-        init_train_step_run_ctx(device=self._device)
+        init_train_step_run_ctx(device=self._device, engine=self)
 
         for dataset_name, dataset in self.eval_datasets.items():
             dataset_start_time = time.time()
@@ -277,7 +277,7 @@ class Engine(EngineBase):
         Runs the model
         """
         self._model.eval()
-        init_forward_step_run_ctx(device=self._device)
+        init_forward_step_run_ctx(device=self._device, engine=self)
 
         if forward_init_hook := self.config.typed_value("forward_init_hook", None):
             assert callable(forward_init_hook)
