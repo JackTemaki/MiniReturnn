@@ -335,7 +335,12 @@ class Engine(EngineBase):
         )
 
         wrapped_dataset = returnn_dataset_wrapper.ReturnnDatasetIterDataPipe(dataset, reset_callback=dataset_reset)
-
+        min_seq_length = self.config.typed_value("min_seq_length", None)  # type: Union[int,Dict[str,int],NumbersDict]
+        max_seq_length = self.config.typed_value("max_seq_length", None)  # type: Union[int,Dict[str,int],NumbersDict]
+        if (min_seq_length is not None) or (max_seq_length is not None):
+            wrapped_dataset = data_pipeline.LenFilterDataPipe(
+                wrapped_dataset, min_seq_length=min_seq_length, max_seq_length=max_seq_length
+            )
         chunking = self.config.typed_value("chunking", None)
         min_chunk_size = self.config.typed_value("min_chunk_size", 0)
         if chunking:
@@ -424,7 +429,8 @@ class Engine(EngineBase):
         if filename is not None:
             print("Load model %s" % (filename,), file=log.v4)
             checkpoint_state = torch.load(
-                filename + ".pt", map_location=self._device,
+                filename + ".pt",
+                map_location=self._device,
             )
             step = checkpoint_state["step"]
             self._start_epoch = self._final_epoch = checkpoint_state["epoch"]
