@@ -35,7 +35,7 @@ def init_train_step_run_ctx(device: str, engine: Engine):
     Call this at the beginning of a new train step.
     """
     global _run_ctx
-    _run_ctx = RunCtx(stage="train_step", device=device, engine=Engine)
+    _run_ctx = RunCtx(stage="train_step", device=device, engine=engine)
 
 
 def init_forward_step_run_ctx(device: str, engine: Engine):
@@ -43,7 +43,7 @@ def init_forward_step_run_ctx(device: str, engine: Engine):
     Call this at the beginning of a new forward step.
     """
     global _run_ctx
-    _run_ctx = RunCtx(stage="forward_step", device=device, engine=Engine)
+    _run_ctx = RunCtx(stage="forward_step", device=device, engine=engine)
 
 
 def get_run_ctx() -> RunCtx:
