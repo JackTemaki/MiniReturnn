@@ -189,7 +189,7 @@ class Engine(EngineBase):
             )
 
             if self.config.bool("stop_on_nonfinite_train_score", True):
-                self.check_nonfinite_train_score(losses_dict, accumulated_losses_dict)
+                self._check_nonfinite_train_score(losses_dict, accumulated_losses_dict)
 
             accumulated_losses_dict += losses_dict
             accumulated_inv_norm_dict += inv_norm_dict
@@ -550,7 +550,7 @@ class Engine(EngineBase):
             if os.path.isfile(filename):
                 os.unlink(filename)
 
-    def check_nonfinite_train_score(self, scores: Dict, accumulated_scores=None):
+    def _check_nonfinite_train_score(self, scores: Dict, accumulated_scores=None):
         if any((math.isnan(v) or math.isinf(v)) for v in scores.values()):
             print("Model seems broken, got inf or nan loss.", file=log.v1)
             if accumulated_scores is not None:
