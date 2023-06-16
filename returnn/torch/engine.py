@@ -187,14 +187,14 @@ class Engine(EngineBase):
                     for name, loss in ctx_losses_dict.items()
                 }
             )
-            
+
             if self.config.bool("stop_on_nonfinite_train_score", True):
                 if any((math.isnan(v) or math.isinf(v)) for v in losses_dict.values()):
                     print("Model seems broken, got inf or nan loss.", file=log.v1)
                     print(f"Accumulated losses: {accumulated_losses_dict}", file=log.v1)
                     print(f"Step losses: {losses_dict}", file=log.v1)
                     raise Exception(f"Inf/nan loss in epoch{self.epoch}, step {step_idx}.")
-                
+
             accumulated_losses_dict += losses_dict
             accumulated_inv_norm_dict += inv_norm_dict
             self.print_step_info(
@@ -523,10 +523,17 @@ class Engine(EngineBase):
         :param int epoch: Epoch from which to load the optimizer state.
         """
         filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".opt.pt"
-        if (os.path.isfile(filename)):
+        if os.path.isfile(filename):
             self._updater.load_optimizer(filename, device=self._device)
+        elif self.config.bool("use_fresh_optimizer_for_missing_checkpoint", False):
+            print(
+                "Warning: No optimizer state for the given checkpoint could be loaded. Continuing training with a fresh optimizer...",
+                file=log.v4,
+            )
         else:
-            print("Warning: No optimizer state for the given checkpoint could be loaded. Continuing training with a fresh optimizer...", file=log.v4)
+            raise Exception(
+                f"Optimizer file {filename} not found and use_fresh_optimizer_for_missing_checkpoint is False"
+            )
 
     def _save_optimizer(self):
         """
