@@ -189,11 +189,7 @@ class Engine(EngineBase):
             )
 
             if self.config.bool("stop_on_nonfinite_train_score", True):
-                if any((math.isnan(v) or math.isinf(v)) for v in losses_dict.values()):
-                    print("Model seems broken, got inf or nan loss.", file=log.v1)
-                    print(f"Accumulated losses: {accumulated_losses_dict}", file=log.v1)
-                    print(f"Step losses: {losses_dict}", file=log.v1)
-                    raise Exception(f"Inf/nan loss in epoch{self.epoch}, step {step_idx}.")
+                self.check_nonfinite_train_score(losses_dict, accumulated_losses_dict)
 
             accumulated_losses_dict += losses_dict
             accumulated_inv_norm_dict += inv_norm_dict
@@ -553,6 +549,14 @@ class Engine(EngineBase):
             filename = self.get_epoch_model_filename(epoch=clean_epoch) + ".opt.pt"
             if os.path.isfile(filename):
                 os.unlink(filename)
+
+    def check_nonfinite_train_score(self, scores: Dict, accumulated_scores=None):
+        if any((math.isnan(v) or math.isinf(v)) for v in scores.values()):
+            print("Model seems broken, got inf or nan loss.", file=log.v1)
+            if accumulated_scores is not None:
+                print(f"Accumulated losses: {accumulated_scores}", file=log.v1)
+            print(f"Step losses: {scores}", file=log.v1)
+            raise Exception(f"Inf/nan loss in epoch {self.epoch}, step {self._train_step}.")
 
     @staticmethod
     def delete_model(filename):
