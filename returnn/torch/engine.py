@@ -15,6 +15,7 @@ from torch import autocast, Tensor
 from torch.cuda import amp
 from torch.utils.data import DataLoader
 from random import random
+import math
 
 from returnn.config import Config
 from returnn.log import log
@@ -186,6 +187,14 @@ class Engine(EngineBase):
                     for name, loss in ctx_losses_dict.items()
                 }
             )
+            
+            if self.config.bool("stop_on_nonfinite_train_score", True):
+                if any((math.isnan(v) or math.isinf(v)) for v in losses_dict.values()):
+                    print("Model seems broken, got inf or nan loss.", file=log.v1)
+                    print(f"Accumulated losses: {accumulated_losses_dict}", file=log.v1)
+                    print(f"Step losses: {losses_dict}", file=log.v1)
+                    raise Exception(f"Inf/nan loss in epoch{self.epoch}, step {step_idx}.")
+                
             accumulated_losses_dict += losses_dict
             accumulated_inv_norm_dict += inv_norm_dict
             self.print_step_info(
