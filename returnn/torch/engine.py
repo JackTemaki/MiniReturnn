@@ -523,7 +523,10 @@ class Engine(EngineBase):
         :param int epoch: Epoch from which to load the optimizer state.
         """
         filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".opt.pt"
-        self._updater.load_optimizer(filename, device=self._device)
+        if (os.path.isfile(filename)):
+            self._updater.load_optimizer(filename, device=self._device)
+        else:
+            print("Warning: No optimizer state for the given checkpoint could be loaded. Continuing training with a fresh optimizer...", file=log.v4)
 
     def _save_optimizer(self):
         """
