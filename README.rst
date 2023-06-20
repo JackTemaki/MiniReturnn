@@ -10,6 +10,9 @@ General config-compatibility to RETURNN is kept, but technical details differ, e
 Nevertheless, expect the Mini-RETURNN config to be more strict and more verbose, with less implicit or default assumptions.
 
 
+Version 0.1
+-----------
+
 Removed features:
  - Anything related to the Tensorflow backend (also tools and tests)
  - Anything related to the Frontend API
