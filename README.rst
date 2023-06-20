@@ -22,6 +22,10 @@ Removed features:
  - "hdf_dump" no longer allows strings but only config files, dumps only "train" (which it probably also did before).
 
 
+Not yet added features:
+ - Multi-GPU training
+
+
 Changed behavior:
  - The data to the actual step function in the config is passed as PyTorch tensor dict instead of Frontend Tensors
    - Axis information is automatically added as ``<data_name>:size<idx>`` entry starting from 0 = batch axis
@@ -41,7 +45,6 @@ Changed behavior:
 Added features that are likely to appear in mainline-RETURNN:
  - Checkpoint cleanup, currently pending for mainline RETURNN in https://github.com/rwth-i6/returnn/pull/1316
  - seq_tag, seq_idx and non-Tensor data support in the data pipeline, pending at: https://github.com/rwth-i6/returnn/pull/1330
- - Forwarding as task for the PyTorch Engine
 
 
 Experimental features that might not be needed:
