@@ -24,7 +24,7 @@ from returnn.util import NumbersDict
 from .updater import Updater
 from .data import pipeline as data_pipeline
 from .data import returnn_dataset_wrapper
-from .context import get_run_ctx, init_train_step_run_ctx, init_forward_step_run_ctx, RunCtx, Loss
+from .context import get_run_ctx, init_load_run_ctx, init_train_step_run_ctx, init_forward_step_run_ctx, RunCtx, Loss
 
 
 class Engine(EngineBase):
@@ -163,7 +163,7 @@ class Engine(EngineBase):
         epoch_start_time = time.time()
 
         self._model.train()
-        init_train_step_run_ctx(device=self._device, engine=self)
+        init_train_step_run_ctx(device=self._device, engine=self, epoch=self.epoch)
 
         accumulated_losses_dict = NumbersDict()
         accumulated_inv_norm_dict = NumbersDict()
@@ -172,7 +172,7 @@ class Engine(EngineBase):
             step_time_start = time.time()
 
             run_ctx = get_run_ctx()
-            run_ctx.init_step()
+            run_ctx.init_step(self._train_step)
 
             total_loss, ctx_losses_dict = self.run_train_step(data, run_ctx)
 
@@ -216,7 +216,7 @@ class Engine(EngineBase):
         Runs model on all eval datasets and calculates the loss.
         """
         self._model.eval()
-        init_train_step_run_ctx(device=self._device, engine=self)
+        init_train_step_run_ctx(device=self._device, engine=self, epoch=self.epoch)
 
         for dataset_name, dataset in self.eval_datasets.items():
             dataset_start_time = time.time()
@@ -232,7 +232,7 @@ class Engine(EngineBase):
                 for data in data_loader:
                     step_time_start = time.time()
                     run_ctx = get_run_ctx()
-                    run_ctx.init_step()
+                    run_ctx.init_step(self._train_step)
 
                     total_loss, ctx_losses_dict = self.run_eval_step(data, run_ctx)
 
@@ -277,7 +277,8 @@ class Engine(EngineBase):
         Runs the model
         """
         self._model.eval()
-        init_forward_step_run_ctx(device=self._device, engine=self)
+        self.epoch = self._start_epoch
+        init_forward_step_run_ctx(device=self._device, engine=self, epoch=self.epoch)
 
         if forward_init_hook := self.config.typed_value("forward_init_hook", None):
             assert callable(forward_init_hook)
@@ -293,7 +294,7 @@ class Engine(EngineBase):
             for data in data_loader:
                 step_time_start = time.time()
                 run_ctx = get_run_ctx()
-                run_ctx.init_step()
+                run_ctx.init_step(self._train_step)
 
                 self.run_forward_step(data, run_ctx)
 
@@ -425,6 +426,8 @@ class Engine(EngineBase):
         random_seed = self.config.int("random_seed", 42)
         random_seed = (epoch * 193939 + step * 19937 + random_seed * 27644437 + 479001599) % (2**31)
         torch.manual_seed(random_seed)
+
+        init_load_run_ctx(device=self._device, engine=self, epoch=epoch)
 
         get_model_func = self.config.typed_value("get_model")
         assert get_model_func, "get_model not defined"

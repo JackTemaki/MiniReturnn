@@ -1,14 +1,17 @@
-=======================
-Welcome to Mini-RETURNN
-=======================
+Changelog
+=========
 
-Mini-RETURNN is a feature-less derivative of `RETURNN <https://github.com/rwth-i6/returnn>`__ which only contains of basic components needed to train sequence-to-sequence models (e.g. ASR, MT or TTS) with PyTorch.
-No network helper functions are provided, all model logic has to be explicitly defined by the user.
-This is repository is intended to be a quick playground for custom experiments, for everything serious please use `RETURNN <https://github.com/rwth-i6/returnn>`__.
 
-General config-compatibility to RETURNN is kept, but technical details differ, especially regarding the Torch engine class.
-Nevertheless, expect the Mini-RETURNN config to be more strict and more verbose, with less implicit or default assumptions.
 
+Current Master (0.1+git)
+------------------------
+
+- provide ``epoch`` and ``step`` in ``RunCtx`` (`<https://github.com/JackTemaki/MiniReturnn/pull/4>`_)
+
+Version 0.1
+-----------
+
+This part is taken from the readme at time of tagging v0.1.
 
 Removed features:
  - Anything related to the Tensorflow backend (also tools and tests)
@@ -49,12 +52,3 @@ Added features that are likely to appear in mainline-RETURNN:
 Experimental features that might not be needed:
  - ``batching_drop_last`` config parameter to discard the last incomplete batch in an epoch
  - forward init/finish hooks that can be used to attach custom objects to the run_ctx
-
-
-Installation
-------------
-
-PyTorch >= 1.13 is recommended, but might not be strictly necessary.
-You can use the `requirements.txt` file to install all strictly necessary packages.
-Additional packages might be required for certain features, which can be installed using ``requirements-optional.txt`.
-
