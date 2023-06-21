@@ -4,6 +4,8 @@ import torch
 from torch import nn
 import tempfile
 
+import tests.setup_test_env  # noqa
+
 
 def ce_train_step(*, model, data, run_ctx, **_kwargs):
     features = data["data"]
