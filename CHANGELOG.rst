@@ -7,6 +7,7 @@ Current Master (0.1+git)
 ------------------------
 
 - provide ``epoch`` and ``step`` in ``RunCtx`` (`<https://github.com/JackTemaki/MiniReturnn/pull/4>`_)
+- ``allow_missing_optimizer_checkpoint`` config parameter to allow the usage of a fresh optimizer in case the optimizer checkpoint for the chosen epoch can't be found
 
 Version 0.1
 -----------
@@ -52,4 +53,3 @@ Added features that are likely to appear in mainline-RETURNN:
 Experimental features that might not be needed:
  - ``batching_drop_last`` config parameter to discard the last incomplete batch in an epoch
  - forward init/finish hooks that can be used to attach custom objects to the run_ctx
- - ``allow_missing_optimizer`` config parameter to allow the usage of a fresh optimizer in case the optimizer checkpoint for the chosen epoch can't be found
