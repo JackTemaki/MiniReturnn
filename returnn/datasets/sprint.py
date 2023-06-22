@@ -141,7 +141,6 @@ class SprintDatasetBase(Dataset):
         self.sprint_finalized = False
         self._target_black_list = []  # if we get non numpy arrays and cannot convert them
         self._reset_cache()
-        assert self.shuffle_frames_of_nseqs == 0  # Currently broken. But just use Sprint itself to do this.
 
     def use_multiple_epochs(self):
         """
@@ -516,9 +515,6 @@ class SprintDatasetBase(Dataset):
             self.ready_for_data = False
             self.cond.notify_all()
 
-    def _shuffle_frames_in_seqs(self, start, end):
-        assert False, "Shuffling in SprintDataset only via Sprint at the moment."
-
     def get_num_timesteps(self):
         """
         :rtype: int
@@ -538,16 +534,6 @@ class SprintDatasetBase(Dataset):
             if not self.reached_final_seq:
                 raise NotImplementedError
             return self.next_seq_to_be_added
-
-    def have_seqs(self):
-        """
-        :rtype: bool
-        """
-        with self.lock:
-            if self.next_seq_to_be_added > 0:
-                return True
-            self._wait_for_seq(0)
-            return self.next_seq_to_be_added > 0
 
     def is_less_than_num_seqs(self, n):
         """

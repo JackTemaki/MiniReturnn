@@ -57,7 +57,6 @@ def main():
             # Currently the setup will ignore all other data except in returnn/.
             # At least make the version available.
             shutil.copy("PKG-INFO", "returnn/")
-            shutil.copy("returnn/")
             # Just using package_data = ["*"] would only take files from current dir.
             package_data = []
             for root, dirs, files in os.walk("."):
@@ -70,21 +69,21 @@ def main():
     from distutils.core import setup
 
     setup(
-        name="returnn",
+        name="mini-returnn",
         version=version,
         packages=["returnn"],
         include_package_data=True,
         package_data={"returnn": package_data},  # filtered via MANIFEST.in
-        description="The RWTH extensible training framework for universal recurrent neural networks",
-        author="Albert Zeyer",
-        author_email="albzey@gmail.com",
-        url="https://github.com/rwth-i6/returnn/",
+        description="Mini-RETURNN, a lightweight variant of RETURNN",
+        author="Albert Zeyer, Nick Rossenbach",
+        author_email="rossenbach@cs.rwth-aachen.de",
+        url="https://github.com/JackTemaki/MiniReturnn",
         license="RETURNN license",
         long_description=open("README.rst").read(),
         long_description_content_type="text/x-rst",
         # https://pypi.python.org/pypi?%3Aaction=list_classifiers
         classifiers=[
-            "Development Status :: 5 - Production/Stable",
+            "Development Status :: 4 - Beta",
             "Environment :: Console",
             "Environment :: GPU",
             "Environment :: GPU :: NVIDIA CUDA",

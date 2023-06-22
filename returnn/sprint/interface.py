@@ -902,7 +902,6 @@ def features_to_dataset(features, segment_name):
         customDataset.init_seq_order(epoch=1, seq_list=[segment_name])
 
     # Fill the data for the current segment.
-    sprintDataset.shuffle_frames_of_nseqs = 0  # We must not shuffle.
     sprintDataset.init_sprint_epoch(None)  # Reset cache. We don't need old seqs anymore.
     sprintDataset.init_seq_order(epoch=1, seq_list=[segment_name])
     seq = sprintDataset.add_new_data(features, segment_name=segment_name)

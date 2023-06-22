@@ -7,12 +7,14 @@ or forwarding loop.
 """
 
 from __future__ import annotations
-from typing import Optional, Union, Dict
+from typing import Optional, Union, Dict, TYPE_CHECKING
 from dataclasses import dataclass
 
 import torch
 from torch import Tensor
 
+if TYPE_CHECKING:
+    from .engine import Engine
 
 __all__ = ["RunCtx", "Loss", "get_run_ctx", "init_train_step_run_ctx", "init_forward_step_run_ctx"]
 
@@ -28,20 +30,25 @@ def reset_run_ctx():
     _run_ctx = None
 
 
-def init_train_step_run_ctx(device: str):
+def init_load_run_ctx(device: str, engine: Engine, epoch: int):
+    global _run_ctx
+    _run_ctx = RunCtx(stage="load", device=device, engine=engine, epoch=epoch)
+
+
+def init_train_step_run_ctx(device: str, engine: Engine, epoch: int):
     """
     Call this at the beginning of a new train step.
     """
     global _run_ctx
-    _run_ctx = RunCtx(stage="train_step", device=device)
+    _run_ctx = RunCtx(stage="train_step", device=device, engine=engine, epoch=epoch)
 
 
-def init_forward_step_run_ctx(device: str):
+def init_forward_step_run_ctx(device: str, engine: Engine, epoch: int):
     """
     Call this at the beginning of a new forward step.
     """
     global _run_ctx
-    _run_ctx = RunCtx(stage="forward_step", device=device)
+    _run_ctx = RunCtx(stage="forward_step", device=device, engine=engine, epoch=epoch)
 
 
 def get_run_ctx() -> RunCtx:
@@ -50,9 +57,7 @@ def get_run_ctx() -> RunCtx:
     """
     global _run_ctx, _init_run_ctx
     if _run_ctx is None:
-        if _init_run_ctx is None:
-            _init_run_ctx = RunCtx(stage="init")
-        return _init_run_ctx
+        raise Exception("RunCtx was not initialized yet")
     return _run_ctx
 
 
@@ -63,24 +68,49 @@ class RunCtx:
     or forwarding loop (doing recog, beam search, dumping whatever, ...).
 
     In training/eval, we expect that some loss is being defined via mark_as_loss().
-    In forwarding, we expect that some output is being defined via mark_as_output().
     """
 
-    def __init__(self, *, device: str, stage: str):
+    def __init__(self, *, device: str, stage: str, engine: Engine, epoch: int):
         """
         :param device:
         :param stage:
-            - "init"
+            - "load"
             - "train_step", also for eval, for mark_as_loss and get_total_loss
             - "forward_step", for mark_as_output
+        :param engine: reference to the engine
+        :param epoch: current epoch
         """
-        self.device = device
-        self.stage = stage
+        self._device = device
+        self._stage = stage
+        self._engine = engine
+        self._epoch = epoch
+        self._global_step = None
         self.losses: Dict[str, Loss] = {}
 
-    def init_step(self):
+    @property
+    def device(self):
+        return self._device
+
+    @property
+    def stage(self):
+        return self._stage
+
+    @property
+    def engine(self):
+        return self._engine
+
+    @property
+    def epoch(self):
+        return self._epoch
+
+    @property
+    def global_step(self):
+        return self._global_step
+
+    def init_step(self, global_step: int):
         """ """
         self.losses = {}
+        self._global_step = global_step
 
     def mark_as_loss(
         self, loss: Tensor, name: str, *, scale: float = 1.0, inv_norm_factor: Optional[Tensor] = None
