@@ -521,7 +521,7 @@ class Engine(EngineBase):
         filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".opt.pt"
         if os.path.isfile(filename):
             self._updater.load_optimizer(filename, device=self._device)
-        elif self.config.bool("use_fresh_optimizer_for_missing_checkpoint", False):
+        elif self.config.bool("allow_missing_optimizer", False):
             print(
                 "Warning: No optimizer state for the given checkpoint could be loaded. Continuing training with a fresh optimizer...",
                 file=log.v4,
@@ -550,7 +550,13 @@ class Engine(EngineBase):
             if os.path.isfile(filename):
                 os.unlink(filename)
 
-    def _check_nonfinite_train_score(self, scores: Dict, accumulated_scores=None):
+    def _check_nonfinite_train_score(self, scores: Dict, accumulated_scores: Dict = None):
+        """
+        Checks if the score dictionary contains any nan or inf values
+        :param scores: Dict containing score values
+        :param accumulated_scores (optional): Dict containing accumulated score values. Defaults to None
+        :raises Exception if nan or inf value is found.
+        """
         if any((math.isnan(v) or math.isinf(v)) for v in scores.values()):
             print("Model seems broken, got inf or nan loss.", file=log.v1)
             if accumulated_scores is not None:
