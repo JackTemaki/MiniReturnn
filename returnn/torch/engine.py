@@ -524,7 +524,7 @@ class Engine(EngineBase):
         filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".opt.pt"
         if os.path.isfile(filename):
             self._updater.load_optimizer(filename, device=self._device)
-        elif self.config.bool("allow_missing_optimizer", False):
+        elif self.config.bool("allow_missing_optimizer_checkpoint", False):
             print(
                 "Warning: No optimizer state for the given checkpoint could be loaded. Continuing training with a fresh optimizer...",
                 file=log.v4,
