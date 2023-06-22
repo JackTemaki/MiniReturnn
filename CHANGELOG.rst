@@ -52,3 +52,4 @@ Added features that are likely to appear in mainline-RETURNN:
 Experimental features that might not be needed:
  - ``batching_drop_last`` config parameter to discard the last incomplete batch in an epoch
  - forward init/finish hooks that can be used to attach custom objects to the run_ctx
+ - ``allow_missing_optimizer`` config parameter to allow the usage of a fresh optimizer in case the optimizer checkpoint for the chosen epoch can't be found
