@@ -347,7 +347,7 @@ class Engine(EngineBase):
             batches_dataset, collate_fn=partial(data_pipeline.collate_batch, device=self._device)
         )
 
-        return DataLoader(dataset=batches_dataset, batch_size=None, num_workers=1, multiprocessing_context="spawn")
+        return DataLoader(dataset=batches_dataset, batch_size=None, num_workers=1, multiprocessing_context="spawn", persistent_workers=True)
 
     def run_train_step(self, data: dict[str, torch.Tensor], run_ctx: RunCtx) -> Tuple[Tensor, Dict[str, Loss]]:
         """
