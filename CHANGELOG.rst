@@ -7,6 +7,7 @@ Current Master (0.1+git)
 ------------------------
 
 - provide ``epoch`` and ``step`` in ``RunCtx`` (`<https://github.com/JackTemaki/MiniReturnn/pull/4>`_)
+- ``allow_missing_optimizer_checkpoint`` config parameter to allow the usage of a fresh optimizer in case the optimizer checkpoint for the chosen epoch can't be found
 
 Version 0.1
 -----------

@@ -15,6 +15,7 @@ from torch import autocast, Tensor
 from torch.cuda import amp
 from torch.utils.data import DataLoader
 from random import random
+import math
 
 from returnn.config import Config
 from returnn.log import log
@@ -186,6 +187,10 @@ class Engine(EngineBase):
                     for name, loss in ctx_losses_dict.items()
                 }
             )
+
+            if self.config.bool("stop_on_nonfinite_train_score", True):
+                self._check_nonfinite_train_score(losses_dict, accumulated_losses_dict)
+
             accumulated_losses_dict += losses_dict
             accumulated_inv_norm_dict += inv_norm_dict
             self.print_step_info(
@@ -517,7 +522,17 @@ class Engine(EngineBase):
         :param int epoch: Epoch from which to load the optimizer state.
         """
         filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".opt.pt"
-        self._updater.load_optimizer(filename, device=self._device)
+        if os.path.isfile(filename):
+            self._updater.load_optimizer(filename, device=self._device)
+        elif self.config.bool("allow_missing_optimizer_checkpoint", False):
+            print(
+                "Warning: No optimizer state for the given checkpoint could be loaded. Continuing training with a fresh optimizer...",
+                file=log.v4,
+            )
+        else:
+            raise Exception(
+                f"Optimizer file {filename} not found and use_fresh_optimizer_for_missing_checkpoint is False"
+            )
 
     def _save_optimizer(self):
         """
@@ -537,6 +552,20 @@ class Engine(EngineBase):
             filename = self.get_epoch_model_filename(epoch=clean_epoch) + ".opt.pt"
             if os.path.isfile(filename):
                 os.unlink(filename)
+
+    def _check_nonfinite_train_score(self, scores: Dict, accumulated_scores: Dict = None):
+        """
+        Checks if the score dictionary contains any nan or inf values
+        :param scores: Dict containing score values
+        :param accumulated_scores (optional): Dict containing accumulated score values. Defaults to None
+        :raises Exception if nan or inf value is found.
+        """
+        if any((math.isnan(v) or math.isinf(v)) for v in scores.values()):
+            print("Model seems broken, got inf or nan loss.", file=log.v1)
+            if accumulated_scores is not None:
+                print(f"Accumulated losses: {accumulated_scores}", file=log.v1)
+            print(f"Step losses: {scores}", file=log.v1)
+            raise Exception(f"Inf/nan loss in epoch {self.epoch}, step {self._train_step}.")
 
     @staticmethod
     def delete_model(filename):
