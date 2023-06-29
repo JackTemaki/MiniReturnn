@@ -7,6 +7,7 @@ from functools import partial
 from typing import Optional, Callable, Dict, Tuple
 from contextlib import nullcontext
 
+import gc
 import os
 import time
 import torch
@@ -92,7 +93,9 @@ class Engine(EngineBase):
         self._load_model(epoch=self._start_epoch)
         self._save_model_epoch_interval = self.config.int("save_interval", 1)
 
-        self._updater = Updater(self.config, self._model, self.learning_rate)
+        self._updater = Updater(
+            config=self.config, network=self._model, device=self._device, initial_learning_rate=self.learning_rate
+        )
         self._updater.create_optimizer()
         if self._start_epoch > 1:
             self._load_optimizer(self._start_epoch)
@@ -421,14 +424,14 @@ class Engine(EngineBase):
         if filename is not None:
             print("Load model %s" % (filename,), file=log.v4)
             checkpoint_state = torch.load(
-                filename + ".pt", map_location=torch.device("cpu") if self._device == "cpu" else None
+                filename + ".pt", map_location=self._device,
             )
             step = checkpoint_state["step"]
             self._start_epoch = self._final_epoch = checkpoint_state["epoch"]
         elif epoch is not None and epoch > 1:
             filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".pt"
             print("Load model %s" % (filename,), file=log.v4)
-            checkpoint_state = torch.load(filename, map_location=torch.device("cpu") if self._device == "cpu" else None)
+            checkpoint_state = torch.load(filename, map_location=self._device)
             assert checkpoint_state["epoch"] == epoch - 1
             step = checkpoint_state["step"]
         else:
@@ -509,6 +512,9 @@ class Engine(EngineBase):
                     assert not missing_prefix_keys, f"Missing keys and ignore_missing=False: {missing_prefix_keys}"
                 print(f"Missing keys: {missing_keys}", file=log.v4)
 
+        # https://github.com/rwth-i6/returnn/issues/1345
+        del checkpoint_state
+        gc.collect()
         self._model.to(self._device)
 
     def save_model(self):
@@ -532,7 +538,7 @@ class Engine(EngineBase):
         """
         filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".opt.pt"
         if os.path.isfile(filename):
-            self._updater.load_optimizer(filename, device=self._device)
+            self._updater.load_optimizer(filename)
         elif self.config.bool("allow_missing_optimizer_checkpoint", False):
             print(
                 "Warning: No optimizer state for the given checkpoint could be loaded. Continuing training with a fresh optimizer...",
