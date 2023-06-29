@@ -9,6 +9,7 @@ Current Master (0.1+git)
 - provide ``epoch`` and ``step`` in ``RunCtx`` (`<https://github.com/JackTemaki/MiniReturnn/pull/4>`_)
 - ``allow_missing_optimizer_checkpoint`` config parameter to allow the usage of a fresh optimizer in case the optimizer checkpoint for the chosen epoch can't be found
 - use ``persistent_worker=True`` in ``DataLoader`` to prohibit premature deletion of Cuda Tensors within the loader process
+- merge upstream https://github.com/rwth-i6/returnn/pull/1347 (fix for MetaDataset)
 
 Version 0.1
 -----------
