@@ -10,6 +10,10 @@ Current Master (0.1+git)
 - ``allow_missing_optimizer_checkpoint`` config parameter to allow the usage of a fresh optimizer in case the optimizer checkpoint for the chosen epoch can't be found
 - use ``persistent_worker=True`` in ``DataLoader`` to prohibit premature deletion of Cuda Tensors within the loader process
 - merge upstream https://github.com/rwth-i6/returnn/pull/1347 (fix for MetaDataset)
+- merge upstream https://github.com/rwth-i6/returnn/pull/1344 (min_seq_len/max_seq_len support)
+- merge upstream https://github.com/rwth-i6/returnn/pull/1346 (load model to correct device)
+- merge upstream https://github.com/rwth-i6/returnn/pull/1358 (min_chunk_size parameter)
+
 
 Version 0.1
 -----------
