@@ -39,16 +39,11 @@ Changed behavior:
    although the conclusion that the mainline RETURNN behavior can be non-deterministic was not reached there.
  - Always uses the cache-manager if available, even when not running in cluster
  - Dataloader2 from ``torchdata`` was replaced by Dataloader from ``torch.utils.data``, as Dataloader2 has a non-stable API. In addition, num_workers=1 with "spawn" multiprocessing is set. This means that an extra process loads the data, and prefetch is working correctly, resulting in significant speedups.
-
-
-Added features that are likely to appear in mainline-RETURNN:
- - Checkpoint cleanup, currently pending for mainline RETURNN in https://github.com/rwth-i6/returnn/pull/1316
- - seq_tag, seq_idx and non-Tensor data support in the data pipeline, pending at: https://github.com/rwth-i6/returnn/pull/1330
-
+ - seq_tag, seq_idx and non-Tensor/np.array data support works differently
+ - forward init/finish hook interface is different (might be streamlined in a future version)
 
 Experimental features that might not be needed:
  - ``batching_drop_last`` config parameter to discard the last incomplete batch in an epoch
- - forward init/finish hooks that can be used to attach custom objects to the run_ctx
 
 
 Installation
