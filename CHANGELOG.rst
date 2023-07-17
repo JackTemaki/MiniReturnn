@@ -13,6 +13,7 @@ Current Master (0.1+git)
 - merge upstream https://github.com/rwth-i6/returnn/pull/1344 (min_seq_len/max_seq_len support)
 - merge upstream https://github.com/rwth-i6/returnn/pull/1346 (load model to correct device)
 - merge upstream https://github.com/rwth-i6/returnn/pull/1358 (min_chunk_size parameter)
+- add ``tools/torch_export_to_onnx.py``
 
 
 Version 0.1
