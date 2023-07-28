@@ -169,6 +169,8 @@ class Updater(object):
         if self._grad_scaler is not None:
             self._grad_scaler.scale(loss).backward()
             self._grad_scaler.unscale_(self.optimizer)
+        else:
+            loss.backward()
 
         if self._grad_clip is not None:
             torch.nn.utils.clip_grad_value_(self.network.parameters(), self._grad_clip)
