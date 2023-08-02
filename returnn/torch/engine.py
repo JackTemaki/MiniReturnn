@@ -87,10 +87,7 @@ class Engine(EngineBase):
         for dataset_name, dataset in self.eval_datasets.items():
             self._eval_dataloaders[dataset_name] = self._create_data_loader(dataset)
 
-        # self._start_epoch = self.get_train_start_epoch(self.config)
-        self._start_epoch, filename = self.get_epoch_model(
-            self.config
-        )
+        self._start_epoch, filename = self.get_epoch_model(self.config)
 
         if self._start_epoch is not None:
             self._start_epoch += 1
