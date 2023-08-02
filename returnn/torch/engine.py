@@ -87,18 +87,29 @@ class Engine(EngineBase):
         for dataset_name, dataset in self.eval_datasets.items():
             self._eval_dataloaders[dataset_name] = self._create_data_loader(dataset)
 
-        self._start_epoch = self.get_train_start_epoch(self.config)
-        self._final_epoch = self.config_get_final_epoch(self.config)
+        # self._start_epoch = self.get_train_start_epoch(self.config)
+        self._start_epoch, filename = self.get_epoch_model(self.config) # TODO: Here should get_train_start_epoch be used but it doesn't load models from other trainings
 
-        self._load_model(epoch=self._start_epoch)
+        if self._start_epoch is not None:
+            self._start_epoch += 1
+        else:
+            self._start_epoch = 1
+
+        print(f"Start epoch is set to {self._start_epoch}")
+        self._final_epoch = self.config_get_final_epoch(self.config)
+        print(f"Final epoch is set to {self._final_epoch}")
+
+        self._load_model(epoch=self._start_epoch, filename=filename)
+
         self._save_model_epoch_interval = self.config.int("save_interval", 1)
 
         self._updater = Updater(
             config=self.config, network=self._model, device=self._device, initial_learning_rate=self.learning_rate
         )
         self._updater.create_optimizer()
+        # embed()
         if self._start_epoch > 1:
-            self._load_optimizer(self._start_epoch)
+            self._load_optimizer(self._start_epoch, filename=filename + ".opt.pt")
 
         self._train_step_func = self.config.typed_value("train_step")
         assert self._train_step_func, "train_step not defined"
@@ -416,30 +427,29 @@ class Engine(EngineBase):
         with autocast(device_type=self._device, dtype=self._amp_dtype) if self._amp_dtype else nullcontext():
             self._forward_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
 
-    def _load_model(self, *, epoch: int, filename: Optional[str] = None):
+    def _load_model(self, *, epoch: int, filename: str):
         """
         Sets self._model to a torch.nn.Module.
 
         In case of running on CPU we move all objects to the CPU,
         otherwise we keep the original assignment.
 
-        :param epoch: e.g. via BaseEngine.get_train_start_epoch()
+        :param epoch: e.g. via BaseEngine.get_epoch_model()
+        :param filename: Filename of checkpoint that needs to be loaded to initiliaze the parameters, e.g. coming from BaseEngine.get_epoch_model()
         """
         checkpoint_state = None
         if filename is not None:
             print("Load model %s" % (filename,), file=log.v4)
             checkpoint_state = torch.load(
-                filename + ".pt",
+                filename + self.get_file_postfix(),
                 map_location=self._device,
             )
-            step = checkpoint_state["step"]
-            self._start_epoch = self._final_epoch = checkpoint_state["epoch"]
-        elif epoch is not None and epoch > 1:
-            filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".pt"
-            print("Load model %s" % (filename,), file=log.v4)
-            checkpoint_state = torch.load(filename, map_location=self._device)
-            assert checkpoint_state["epoch"] == epoch - 1
-            step = checkpoint_state["step"]
+
+            if self.config.value("task", "train") != "train":
+                step = checkpoint_state["step"]            
+                assert epoch == checkpoint_state["epoch"], "Checkpoint epoch differs from requested epoch!"
+            else:
+                step = 0
         else:
             step = 0
             # TODO: the epoch handling might still be inconsistent
