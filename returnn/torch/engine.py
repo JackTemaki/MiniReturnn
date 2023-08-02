@@ -88,7 +88,9 @@ class Engine(EngineBase):
             self._eval_dataloaders[dataset_name] = self._create_data_loader(dataset)
 
         # self._start_epoch = self.get_train_start_epoch(self.config)
-        self._start_epoch, filename = self.get_epoch_model(self.config) # TODO: Here should get_train_start_epoch be used but it doesn't load models from other trainings
+        self._start_epoch, filename = self.get_epoch_model(
+            self.config
+        )
 
         if self._start_epoch is not None:
             self._start_epoch += 1
@@ -446,7 +448,7 @@ class Engine(EngineBase):
             )
 
             if self.config.value("task", "train") != "train":
-                step = checkpoint_state["step"]            
+                step = checkpoint_state["step"]
                 assert epoch == checkpoint_state["epoch"], "Checkpoint epoch differs from requested epoch!"
             else:
                 step = 0
@@ -554,7 +556,7 @@ class Engine(EngineBase):
         """
         if filename is None:
             filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".opt.pt"
-        
+
         if os.path.isfile(filename):
             self._updater.load_optimizer(filename)
         elif self.config.bool("allow_missing_optimizer_checkpoint", False):
@@ -563,9 +565,7 @@ class Engine(EngineBase):
                 file=log.v4,
             )
         else:
-            raise Exception(
-                f"Optimizer file {filename} not found and allow_missing_optimizer_checkpoint is False"
-            )
+            raise Exception(f"Optimizer file {filename} not found and allow_missing_optimizer_checkpoint is False")
 
     def _save_optimizer(self):
         """
