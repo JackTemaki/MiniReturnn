@@ -545,14 +545,16 @@ class Engine(EngineBase):
         print("Save model under %s" % (filename,), file=log.v4)
         torch.save({"model": self._model.state_dict(), "epoch": self.epoch, "step": self._train_step}, filename)
 
-    def _load_optimizer(self, epoch):
+    def _load_optimizer(self, epoch, filename=None):
         """
         Loads a torch.optim.Optimizer from disk and uses it as the optimizer.
         This function is a wrapper to Updater.load_optimizer().
 
         :param int epoch: Epoch from which to load the optimizer state.
         """
-        filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".opt.pt"
+        if filename is None:
+            filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".opt.pt"
+        
         if os.path.isfile(filename):
             self._updater.load_optimizer(filename)
         elif self.config.bool("allow_missing_optimizer_checkpoint", False):
@@ -562,7 +564,7 @@ class Engine(EngineBase):
             )
         else:
             raise Exception(
-                f"Optimizer file {filename} not found and use_fresh_optimizer_for_missing_checkpoint is False"
+                f"Optimizer file {filename} not found and allow_missing_optimizer_checkpoint is False"
             )
 
     def _save_optimizer(self):
