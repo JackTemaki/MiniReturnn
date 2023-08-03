@@ -70,7 +70,6 @@ class Engine(EngineBase):
         print(f"Using device {self._device}", file=log.v3)
 
         self._amp_dtype = None  # type: Optional[torch.dtype]
-        self._grad_scaler = None  # type: Optional[amp.GradScaler]
 
     def init_train(
         self,
@@ -109,7 +108,7 @@ class Engine(EngineBase):
             amp_dtype_str = amp_options.get("dtype")
             assert amp_dtype_str in ["float16", "bfloat16"]
             self._amp_dtype = getattr(torch, amp_dtype_str)
-            self._grad_scaler = amp.GradScaler()
+            self._updater.create_grad_scaler()
 
     def init_forward(
         self,
@@ -380,9 +379,7 @@ class Engine(EngineBase):
         losses_dict = run_ctx.losses
         total_loss = run_ctx.total_loss()
 
-        self._updater.get_optimizer().zero_grad()
-        total_loss.backward()
-        self._updater.get_optimizer().step()
+        self._updater.step(total_loss)
 
         return total_loss, losses_dict
 
