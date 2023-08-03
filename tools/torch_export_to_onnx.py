@@ -8,7 +8,7 @@ import argparse
 
 import _setup_returnn_env  # noqa
 from returnn.config import Config
-
+from returnn.torch.context import init_load_run_ctx
 
 def main():
     """
@@ -37,6 +37,8 @@ def main():
     else:
         epoch = 1
         step = 0
+
+    init_load_run_ctx(device=args.device, engine=None, epoch=epoch)
 
     get_model_func = config.typed_value("get_model")
     assert get_model_func, "get_model not defined"
