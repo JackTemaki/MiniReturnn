@@ -94,9 +94,7 @@ class Engine(EngineBase):
         else:
             self._start_epoch = 1
 
-        print(f"Start epoch is set to {self._start_epoch}")
         self._final_epoch = self.config_get_final_epoch(self.config)
-        print(f"Final epoch is set to {self._final_epoch}")
 
         self._load_model(epoch=self._start_epoch, filename=filename)
 
@@ -106,7 +104,7 @@ class Engine(EngineBase):
             config=self.config, network=self._model, device=self._device, initial_learning_rate=self.learning_rate
         )
         self._updater.create_optimizer()
-        # embed()
+
         if self._start_epoch > 1:
             self._load_optimizer(self._start_epoch, filename=filename + ".opt.pt")
 
