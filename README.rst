@@ -42,8 +42,12 @@ Changed behavior:
  - seq_tag, seq_idx and non-Tensor/np.array data support works differently
  - forward init/finish hook interface is different (might be streamlined in a future version)
 
+Additional features:
+ - gradient clipping by norm or value
+
 Experimental features that might not be needed:
  - ``batching_drop_last`` config parameter to discard the last incomplete batch in an epoch
+
 
 
 Installation
