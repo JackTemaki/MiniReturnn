@@ -44,6 +44,7 @@ Changed behavior:
 
 Additional features:
  - gradient clipping by norm or value
+ - print cuda memory information
 
 Experimental features that might not be needed:
  - ``batching_drop_last`` config parameter to discard the last incomplete batch in an epoch

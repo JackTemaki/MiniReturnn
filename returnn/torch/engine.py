@@ -617,9 +617,13 @@ class Engine(EngineBase):
         :param loss_dict:
         """
         if log.verbose[5]:
-            info = [report_prefix, "step %i" % step, "took: %.3f" % (time.time() - step_start_time)]
+            t = torch.cuda.get_device_properties(0).total_memory/(1024**3)
+            r = torch.cuda.max_memory_reserved(0)/(1024**3)
+            a = torch.cuda.max_memory_allocated(0)/(1024**3)
+            info = [report_prefix, "step:%i"  % step, "step time: %.3f" % (time.time() - step_start_time)]
             if hasattr(self, "time_since_last_step"):
-                info += ["step time: %.3f" % (time.time() - self.time_since_last_step)]
+                info += ["total time: %.3f" % (time.time() - self.time_since_last_step)]
+            info += ["GMEM: %.1f/%.1f/%.1f" % (a, r, t)]
             if total_loss is not None:
                 info += ["total (grad) loss: %f" % total_loss]
             if loss_dict is not None:

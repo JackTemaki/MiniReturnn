@@ -17,6 +17,7 @@ Current Master (0.1+git)
 - merge upstream https://github.com/rwth-i6/returnn/pull/1364 (fix in cleanup_models regarding learning rate control)
 - fix missing run_ctx init in onnx export
 - integrate gradient clipping/norm: https://github.com/JackTemaki/MiniReturnn/pull/6
+- print CUDA memory information
 
 
 Version 0.1
