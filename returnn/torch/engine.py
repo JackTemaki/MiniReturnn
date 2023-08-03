@@ -426,7 +426,7 @@ class Engine(EngineBase):
         with autocast(device_type=self._device, dtype=self._amp_dtype) if self._amp_dtype else nullcontext():
             self._forward_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
 
-    def _load_model(self, *, epoch: int, filename: str):
+    def _load_model(self, *, epoch: int, filename: Optional[str]):
         """
         Sets self._model to a torch.nn.Module.
 
