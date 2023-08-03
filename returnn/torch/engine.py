@@ -550,6 +550,7 @@ class Engine(EngineBase):
         This function is a wrapper to Updater.load_optimizer().
 
         :param int epoch: Epoch from which to load the optimizer state.
+        :param filename (Optional): Filename of optimizer state
         """
         if filename is None:
             filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".opt.pt"
