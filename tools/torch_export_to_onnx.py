@@ -10,6 +10,7 @@ import _setup_returnn_env  # noqa
 from returnn.config import Config
 from returnn.torch.context import init_load_run_ctx
 
+
 def main():
     """
     Main entry point, exactly follows the interface of upstream RETURNN
