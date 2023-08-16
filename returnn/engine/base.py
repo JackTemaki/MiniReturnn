@@ -133,13 +133,6 @@ class EngineBase(object):
         :returns (epoch, modelFilename)
         :rtype: (int|None, str|None)
         """
-        start_epoch_mode = config.value("start_epoch", "auto")
-        if start_epoch_mode == "auto":
-            start_epoch = None
-        else:
-            start_epoch = int(start_epoch_mode)
-            assert start_epoch >= 1
-
         load_model_epoch_filename = util.get_checkpoint_filepattern(config.value("load", ""))
         if load_model_epoch_filename:
             assert os.path.exists(
@@ -149,63 +142,66 @@ class EngineBase(object):
                 load_model_epoch_filename + cls.get_file_postfix(),
             )
 
-        import_model_train_epoch1 = util.get_checkpoint_filepattern(config.value("import_model_train_epoch1", ""))
-        if import_model_train_epoch1:
-            assert os.path.exists(import_model_train_epoch1 + cls.get_file_postfix())
-
-        existing_models = cls.get_existing_models(config)
-        load_epoch = config.int("load_epoch", -1)
-        if load_model_epoch_filename:
-            if load_epoch <= 0:
-                load_epoch = util.model_epoch_from_filename(load_model_epoch_filename)
-        else:
-            if load_epoch > 0:  # ignore if load_epoch == 0
-                assert load_epoch in existing_models
-                load_model_epoch_filename = existing_models[load_epoch]
-                assert util.model_epoch_from_filename(load_model_epoch_filename) == load_epoch
-
-        # Only use this when we don't train.
-        # For training, we first consider existing models
-        # before we take the 'load' into account when in auto epoch mode.
-        # In all other cases, we use the model specified by 'load'.
-        if load_model_epoch_filename and (config.value("task", "train") != "train" or start_epoch is not None):
-            if config.value("task", "train") == "train" and start_epoch is not None:
-                # Ignore the epoch. To keep it consistent with the case below.
-                epoch = None
+        if (config.value("task", "train") == "train"):
+            start_epoch_mode = config.value("start_epoch", "auto")
+            if start_epoch_mode == "auto":
+                start_epoch = None
             else:
-                epoch = load_epoch
-            epoch_model = (epoch, load_model_epoch_filename)
+                start_epoch = int(start_epoch_mode)
+                assert start_epoch >= 1
+            
+            existing_models = cls.get_existing_models(config)
+            load_epoch = config.int("load_epoch", -1)
+            
+            import_model_train_epoch1 = util.get_checkpoint_filepattern(config.value("import_model_train_epoch1", ""))
+            if import_model_train_epoch1:
+                assert os.path.exists(import_model_train_epoch1 + cls.get_file_postfix())
 
-        # In case of training, always first consider existing models.
-        # This is because we reran RETURNN training, we usually don't want to train from scratch
-        # but resume where we stopped last time.
-        elif existing_models:
-            epoch_model = sorted(existing_models.items())[-1]
-            if load_model_epoch_filename:
-                print("note: there is a 'load' which we ignore because of existing model", file=log.v4)
+            # We are in training so we first want to consider existing models, prioritizing a given start_epoch otherwise using the latest
+            # If no models exist, we check if a given parameter initialization was defined in 'import_model_train_epoch1'
+            # The last case is a given model in 'load', the epoch will then be read from the checkpoint.
+            if existing_models:
+                epoch_model = sorted(existing_models.items())[-1]
+                print(f"Using existing model {epoch_model[1]}", file=log.v4)
+                if load_model_epoch_filename:
+                    print("note: there is a 'load' which we ignore because of existing model", file=log.v4)
+                if start_epoch == 1:
+                    if epoch_model[0]:  # existing model
+                        print("warning: there is an existing model: %s. Model will be ignored and new model will be initialized!" % (epoch_model,), file=log.v4)
+                        epoch_model = (None, None)
+                elif (start_epoch or 0) > 1:
+                    if epoch_model[0]:
+                        if epoch_model[0] != start_epoch - 1:
+                            print("warning: start_epoch %i but there is %s" % (start_epoch, epoch_model), file=log.v4)
+                        epoch_model = start_epoch - 1, existing_models[start_epoch - 1]
 
-        elif config.value("task", "train") == "train" and import_model_train_epoch1 and start_epoch in [None, 1]:
-            epoch_model = (0, import_model_train_epoch1)
+            elif import_model_train_epoch1 and start_epoch in [None, 1]:
+                print(f"Using import model {import_model_train_epoch1}", file=log.v4)
+                epoch_model = (0, import_model_train_epoch1)
 
-        # Now, consider this also in the case when we train, as an initial model import.
-        elif load_model_epoch_filename:
-            # Don't use the model epoch as the start epoch in training.
-            # We use this as an import for training.
-            epoch_model = (load_epoch, load_model_epoch_filename)
+            elif load_model_epoch_filename:
+                print(f"Using load model {load_model_epoch_filename} with start_epoch {start_epoch}", file=log.v4)
 
-        else:
-            epoch_model = (None, None)
+                if (start_epoch or 0) > 1:
+                    load_epoch = start_epoch
+                else:
+                    load_epoch = None
 
-        if start_epoch == 1:
-            if epoch_model[0]:  # existing model
-                print("warning: there is an existing model: %s" % (epoch_model,), file=log.v4)
+                epoch_model = (load_epoch, load_model_epoch_filename)
+
+            else:
+                print(f"Using fresh model", file=log.v4)
                 epoch_model = (None, None)
-        elif (start_epoch or 0) > 1:
-            if epoch_model[0]:
-                if epoch_model[0] != start_epoch - 1:
-                    print("warning: start_epoch %i but there is %s" % (start_epoch, epoch_model), file=log.v4)
-                epoch_model = start_epoch - 1, existing_models[start_epoch - 1]
+        
+        else:
+            assert load_model_epoch_filename, "No model given but task is not training!"
+            
+            if config.int("load_epoch", -1) > -1:
+                print("warning: 'load_epoch' is used together with 'load'. 'load_epoch' will be ignored and epoch from checkpoint in 'load' will be used instead.", file=log.v4)
 
+            # Epoch number is read from the checkpoint
+            epoch_model = (None, load_model_epoch_filename)
+            
         return epoch_model
 
     def cleanup_old_models(self, ask_for_confirmation=False):

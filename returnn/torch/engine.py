@@ -129,12 +129,12 @@ class Engine(EngineBase):
         super().init_forward(forward_data=forward_data)
         self._forward_dataloader = self._create_data_loader(self.forward_dataset)
 
-        self._start_epoch, filename = self.get_epoch_model(self.config)
+        _, filename = self.get_epoch_model(self.config)
 
         # for now assume we only do forward within one epoch setting
         self._final_epoch = self._start_epoch
 
-        self._load_model(epoch=self._start_epoch, filename=filename)
+        self._load_model(epoch=None, filename=filename)
 
         self._forward_step_func = self.config.typed_value("forward_step")
         assert self._forward_step_func, "forward_step not defined"
@@ -442,9 +442,9 @@ class Engine(EngineBase):
                 map_location=self._device,
             )
 
-            if self.config.value("task", "train") != "train":
+            if epoch is None:
                 step = checkpoint_state["step"]
-                assert epoch == checkpoint_state["epoch"], "Checkpoint epoch differs from requested epoch!"
+                epoch = checkpoint_state["epoch"]
             else:
                 step = 0
         else:
