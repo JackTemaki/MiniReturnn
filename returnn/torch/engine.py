@@ -413,7 +413,7 @@ class Engine(EngineBase):
         with autocast(device_type=self._device, dtype=self._amp_dtype) if self._amp_dtype else nullcontext():
             self._forward_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
 
-    def _load_model(self, *, epoch: int, filename: Optional[str] = None):
+    def _load_model(self, *, epoch: Optional[int], filename: Optional[str] = None):
         """
         Sets self._model to a torch.nn.Module.
 
@@ -431,6 +431,10 @@ class Engine(EngineBase):
             )
             step = checkpoint_state["step"]
             self._start_epoch = self._final_epoch = checkpoint_state["epoch"]
+            if epoch is None:
+                epoch = self._start_epoch
+            else:
+                assert epoch == self._start_epoch
         elif epoch is not None and epoch > 1:
             filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".pt"
             print("Load model %s" % (filename,), file=log.v4)

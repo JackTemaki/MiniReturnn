@@ -148,6 +148,9 @@ class EngineBase(object):
                 config.value("load", ""),
                 load_model_epoch_filename + cls.get_file_postfix(),
             )
+            # If "load" is given and "model" is not, always load explicitly
+            if config.value("model", None) is None:
+                return None, load_model_epoch_filename
 
         import_model_train_epoch1 = util.get_checkpoint_filepattern(config.value("import_model_train_epoch1", ""))
         if import_model_train_epoch1:
