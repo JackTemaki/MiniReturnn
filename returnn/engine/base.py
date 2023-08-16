@@ -142,17 +142,17 @@ class EngineBase(object):
                 load_model_epoch_filename + cls.get_file_postfix(),
             )
 
-        if (config.value("task", "train") == "train"):
+        if config.value("task", "train") == "train":
             start_epoch_mode = config.value("start_epoch", "auto")
             if start_epoch_mode == "auto":
                 start_epoch = None
             else:
                 start_epoch = int(start_epoch_mode)
                 assert start_epoch >= 1
-            
+
             existing_models = cls.get_existing_models(config)
             load_epoch = config.int("load_epoch", -1)
-            
+
             import_model_train_epoch1 = util.get_checkpoint_filepattern(config.value("import_model_train_epoch1", ""))
             if import_model_train_epoch1:
                 assert os.path.exists(import_model_train_epoch1 + cls.get_file_postfix())
@@ -167,7 +167,11 @@ class EngineBase(object):
                     print("note: there is a 'load' which we ignore because of existing model", file=log.v4)
                 if start_epoch == 1:
                     if epoch_model[0]:  # existing model
-                        print("warning: there is an existing model: %s. Model will be ignored and new model will be initialized!" % (epoch_model,), file=log.v4)
+                        print(
+                            "warning: there is an existing model: %s. Model will be ignored and new model will be initialized!"
+                            % (epoch_model,),
+                            file=log.v4,
+                        )
                         epoch_model = (None, None)
                 elif (start_epoch or 0) > 1:
                     if epoch_model[0]:
@@ -192,16 +196,19 @@ class EngineBase(object):
             else:
                 print(f"Using fresh model", file=log.v4)
                 epoch_model = (None, None)
-        
+
         else:
             assert load_model_epoch_filename, "No model given but task is not training!"
-            
+
             if config.int("load_epoch", -1) > -1:
-                print("warning: 'load_epoch' is used together with 'load'. 'load_epoch' will be ignored and epoch from checkpoint in 'load' will be used instead.", file=log.v4)
+                print(
+                    "warning: 'load_epoch' is used together with 'load'. 'load_epoch' will be ignored and epoch from checkpoint in 'load' will be used instead.",
+                    file=log.v4,
+                )
 
             # Epoch number is read from the checkpoint
             epoch_model = (None, load_model_epoch_filename)
-            
+
         return epoch_model
 
     def cleanup_old_models(self, ask_for_confirmation=False):
