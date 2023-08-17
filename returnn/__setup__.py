@@ -48,5 +48,7 @@ def get_version_str():
                 print("Exception while getting Git version:", exc)
                 sys.excepthook(*sys.exc_info())
                 raise  # no fallback anymore
+    else:
+        return VERSION
 
     raise Exception("Cannot get RETURNN version.")
