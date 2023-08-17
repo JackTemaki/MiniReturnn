@@ -50,5 +50,3 @@ def get_version_str():
                 raise  # no fallback anymore
     else:
         return VERSION
-
-    raise Exception("Cannot get RETURNN version.")
