@@ -183,15 +183,7 @@ class Log:
         log_verbosity = config.int_list("log_verbosity", [])
         log_format = config.list("log_format", [])
         if config.is_true("use_horovod"):
-            import returnn.tf.horovod
-
-            hvd = returnn.tf.horovod.get_ctx(config=config)
-            new_logs = []
-            for fn in logs:
-                fn_prefix, fn_ext = os.path.splitext(fn)
-                fn_ext = ".horovod-%i-%i%s" % (hvd.rank(), hvd.size(), fn_ext)
-                new_logs.append(fn_prefix + fn_ext)
-            logs = new_logs
+            raise NotImplementedError("Horovod is currently not supported")
         self.initialize(logs=logs, verbosity=log_verbosity, formatter=log_format)
 
     def print_warning(self, text, prefix_text="WARNING:", extra_text=None):
