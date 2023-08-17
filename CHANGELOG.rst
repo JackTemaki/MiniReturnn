@@ -2,6 +2,14 @@ Changelog
 =========
 
 
+Current Master 0.2 (+git)
+-------------------------
+
+Further various code cleanup:
+ - remove commented code in __main__ and make not-implemented messages more verbose
+ - remove dead code in datastes/util/vocabulary.py
+
+
 Version 0.2
 -----------
 
