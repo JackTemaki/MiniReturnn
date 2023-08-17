@@ -221,59 +221,21 @@ def execute_main_task():
         engine.train()
     elif task == "eval":
         raise NotImplementedError("eval task is currently not implemented")
-        # if config.value("load", None):
-        #     # this would directly load whatever model is specified
-        #     print("Evaluate model", config.value("load", None), file=log.v2)
-        #     lr_control_update_scores = False
-        # else:
-        #     # Assume the configured model with some given epoch.
-        #     epoch = config.int("epoch", -1)
-        #     load_epoch = config.int("load_epoch", -1)
-        #     if epoch >= 0:
-        #         assert (load_epoch < 0) or (load_epoch == epoch), "epoch and load_epoch have to match"
-        #         engine.epoch = epoch
-        #         config.set("load_epoch", engine.epoch)
-        #     else:
-        #         assert load_epoch >= 0, "specify epoch or load_epoch"
-        #         engine.epoch = load_epoch
-        #     print("Evaluate epoch", engine.epoch, file=log.v2)
-        #     lr_control_update_scores = True
-        # engine.init_train_from_config(config, train_data, dev_data, eval_data)
-        # engine.eval_model(
-        #     output_file=config.value("eval_output_file", None),
-        #     output_per_seq_file=config.value("eval_output_file_per_seq", None),
-        #     loss_name=config.value("loss_name", None),
-        #     output_per_seq_format=config.list("output_per_seq_format", ["score"]),
-        #     output_per_seq_file_format=config.value("output_per_seq_file_format", "txt"),
-        #     lr_control_update_scores=lr_control_update_scores,
-        # )
     elif task in ["forward"]:
         if config.has("epoch"):
             config.set("load_epoch", config.int("epoch", 0))
         engine.init_forward()
         engine.forward()
     elif task == "search":
-        raise NotImplementedError("search task is currently not implemented")
-        # engine.use_search_flag = True
-        # engine.use_eval_flag = config.bool("search_do_eval", True)
-        # engine.init_network_from_config(config)
-        # if config.value("search_data", "eval") in ["train", "dev", "eval"]:
-        #     data = {"train": train_data, "dev": dev_data, "eval": eval_data}[config.value("search_data", "eval")]
-        #     assert data, "set search_data"
-        # else:
-        #     data = init_dataset(config.opt_typed_value("search_data"))
-        # engine.search(
-        #     data,
-        #     do_eval=config.bool("search_do_eval", True),
-        #     output_layer_names=config.typed_value("search_output_layer", "output"),
-        #     output_file=config.value("search_output_file", ""),
-        #     output_file_format=config.value("search_output_file_format", "txt"),
-        # )
+        raise NotImplementedError(
+            "The search task is not implemented anymore, and will not be added in the future. "
+            "Please use a 'forward' task and implement your own logic via the forward_step"
+        )
     elif task == "compute_priors":
-        raise NotImplementedError("compute_priors task is currently not implemented")
-        # assert train_data is not None, "train data for priors should be provided"
-        # engine.init_network_from_config(config)
-        # engine.compute_priors(dataset=train_data, config=config)
+        raise NotImplementedError(
+            "The compute_priors task is not implemented anymore, and will not be added in the future. "
+            "Please use a 'forward' task and implement your own logic via the forward_step"
+        )
     elif task == "cleanup_old_models":
         engine.cleanup_old_models(ask_for_confirmation=True)
     elif task.startswith("config:"):
