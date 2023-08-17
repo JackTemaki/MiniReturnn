@@ -2,9 +2,8 @@ Changelog
 =========
 
 
-
-Current Master (0.1+git)
-------------------------
+Version 0.2
+-----------
 
 - provide ``epoch`` and ``step`` in ``RunCtx`` (`<https://github.com/JackTemaki/MiniReturnn/pull/4>`_)
 - ``allow_missing_optimizer_checkpoint`` config parameter to allow the usage of a fresh optimizer in case the optimizer checkpoint for the chosen epoch can't be found
@@ -18,6 +17,7 @@ Current Master (0.1+git)
 - fix missing run_ctx init in onnx export
 - integrate gradient clipping/norm: https://github.com/JackTemaki/MiniReturnn/pull/6
 - print CUDA memory information
+- small fix for checkpoint loading: https://github.com/JackTemaki/MiniReturnn/pull/8
 
 
 Version 0.1
