@@ -104,7 +104,6 @@ ignore_count_for_files = {
     "returnn/util/task_system.py",
     "returnn/datasets/bundle_file.py",
     "returnn/datasets/cached.py",
-    "returnn/datasets/normalization_data.py",
     "returnn/datasets/raw_wav.py",
     "returnn/datasets/stereo.py",
     "returnn/tf/layers/segmental_model.py",
