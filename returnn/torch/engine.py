@@ -144,6 +144,7 @@ class Engine(EngineBase):
 
         print("Starting training at epoch {}.".format(self._start_epoch), file=log.v3)
         assert self._model is not None, "Model not initialized, call init_train_from_config()."
+        self._check_epoch_missing_eval()
 
         self.epoch = self._start_epoch
         self._epoch_mp_shared.value = self.epoch
@@ -225,7 +226,7 @@ class Engine(EngineBase):
         self.eval_model()
         self.cleanup_old_models(ask_for_confirmation=False)
 
-    def eval_model(self):
+    def eval_model(self, *, skip_already_evaluated: bool = False):
         """
         Runs model on all eval datasets and calculates the loss.
         """
@@ -233,6 +234,8 @@ class Engine(EngineBase):
         init_train_step_run_ctx(device=self._device, engine=self, epoch=self.epoch)
 
         for dataset_name, dataset in self.eval_datasets.items():
+            if skip_already_evaluated and self._is_dataset_evaluated(name=dataset_name):
+                continue
             dataset_start_time = time.time()
             print(f"Evaluating dataset {dataset_name!r}'", file=log.v3)
 
@@ -683,3 +686,18 @@ class Engine(EngineBase):
         :param loss_dict: the loss dict from train/eval
         """
         return ", ".join(["%s: %.5f" % (k, v) for k, v in sorted(loss_dict.items())])
+
+    def _check_epoch_missing_eval(self):
+        """
+        Checks if there are outstanding tasks (eval_model) for the epoch,
+        and executes them.
+        """
+        if not self.epoch:
+            return
+        if self.learning_rate_control.filename:
+            for name, dataset in self.eval_datasets.items():
+                if not self._is_dataset_evaluated(name=name):
+                    # This can happen when we have a previous model but did not test it yet.
+                    print(f"Last epoch model not yet evaluated on {name}. Doing that now.", file=log.v3)
+                    self.eval_model(skip_already_evaluated=True)
+                    break

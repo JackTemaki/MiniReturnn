@@ -358,3 +358,16 @@ class EngineBase(object):
         if cls.FILE_POSTFIX is None:
             raise NotImplementedError("Missing FILE_POSTFIX in Engine")
         return cls.FILE_POSTFIX
+
+    def _is_dataset_evaluated(self, name: str) -> bool:
+        """
+        Check via self.learning_rate_control.
+
+        :param name: e.g. "dev"
+        :return: whether there is an entry for the score in the learning rate file
+        """
+        assert self.learning_rate_control.filename  # otherwise we would not have stored it
+        error_dict = self.learning_rate_control.get_epoch_error_dict(self.epoch)
+        if not error_dict:
+            return False
+        return any([k.startswith(name) for k in error_dict.keys()])
