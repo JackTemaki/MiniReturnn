@@ -18,6 +18,7 @@ import os
 import unittest
 import better_exchook
 
+from returnn.datasets.util.hdf import SimpleHDFWriter, HDFDatasetWriter
 
 my_dir = os.path.dirname(os.path.abspath(__file__))
 

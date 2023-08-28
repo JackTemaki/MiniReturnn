@@ -11,6 +11,7 @@ import sys
 import argparse
 
 import _setup_returnn_env  # noqa
+import returnn.datasets.util.hdf
 from returnn.log import log
 import returnn.__main__ as rnn
 import returnn.datasets.hdf as hdf_dataset_mod
@@ -21,15 +22,15 @@ from returnn.config import Config
 def hdf_dataset_init(file_name):
     """
     :param str file_name: filename of hdf dataset file in the filesystem
-    :rtype: hdf_dataset_mod.HDFDatasetWriter
+    :rtype: returnn.datasets.util.hdf.HDFDatasetWriter
     """
-    return hdf_dataset_mod.HDFDatasetWriter(filename=file_name)
+    return returnn.datasets.util.hdf.HDFDatasetWriter(filename=file_name)
 
 
 def hdf_dump_from_dataset(dataset, hdf_dataset, parser_args):
     """
     :param Dataset dataset: could be any dataset implemented as child of Dataset
-    :param hdf_dataset_mod.HDFDatasetWriter hdf_dataset:
+    :param returnn.datasets.util.hdf.HDFDatasetWriter hdf_dataset:
     :param parser_args: argparse object from main()
     """
     hdf_dataset.dump_from_dataset(
