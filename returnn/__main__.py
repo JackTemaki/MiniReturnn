@@ -108,23 +108,6 @@ def init_log():
     log.init_by_config(config)
 
 
-def print_task_properties():
-    """
-    print information about used data
-    """
-    if train_data:
-        print("Train data:", file=log.v2)
-        print("  input:", train_data.num_inputs, file=log.v2)
-        print("  output:", train_data.num_outputs, file=log.v2)
-        print(" ", train_data.len_info() or "no info", file=log.v2)
-    if dev_data:
-        print("Dev data:", file=log.v2)
-        print(" ", dev_data.len_info() or "no info", file=log.v2)
-    if eval_data:
-        print("Eval data:", file=log.v2)
-        print(" ", eval_data.len_info() or "no info", file=log.v2)
-
-
 def init_engine():
     """
     Initializes global ``engine``, for example :class:`returnn.tf.engine.Engine`.
@@ -254,7 +237,7 @@ def execute_main_task():
     elif task == "nop":
         print("Task: No-operation", file=log.v1)
     elif task == "initialize_model":
-        engine.init_train(train_data, dev_data, eval_data)
+        engine.init_train()
         engine.save_model()
     else:
         raise Exception("unknown task: %r" % (task,))
