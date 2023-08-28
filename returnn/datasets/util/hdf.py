@@ -5,8 +5,12 @@ import typing
 import h5py
 import numpy
 
-from returnn.datasets.hdf import attr_seqLengths, attr_inputPattSize
 from returnn.log import log
+
+
+HDF_SEQ_LENGTHS_KEY = "seqLengths"
+HDF_INPUT_PATT_SIZE_KEY = "inputPattSize"
+HDF_TIMES_KEY = "times"
 
 
 class SimpleHDFWriter:
@@ -449,11 +453,11 @@ class HDFDatasetWriter:
                 progress_bar_with_time(float(i) / num_seqs)
 
         print("Set seq len info...", file=log.v3)
-        hdf_dataset.create_dataset(attr_seqLengths, shape=(num_seqs, len(data_keys)), dtype="int32")
+        hdf_dataset.create_dataset(HDF_SEQ_LENGTHS_KEY, shape=(num_seqs, len(data_keys)), dtype="int32")
         for i, seq_len in enumerate(seq_lens):
             data_len = [seq_len[data_input_key]] if data_input_key else []
             targets_lens = [seq_len[data_key] for data_key in sorted(data_target_keys)]
-            hdf_dataset[attr_seqLengths][i] = data_len + targets_lens
+            hdf_dataset[HDF_SEQ_LENGTHS_KEY][i] = data_len + targets_lens
             if use_progress_bar:
                 progress_bar_with_time(float(i) / num_seqs)
 
@@ -511,6 +515,6 @@ class HDFDatasetWriter:
         assert offsets == total_seq_len  # Sanity check.
 
         # Set some old-format attribs. Not needed for newer RETURNN versions.
-        hdf_dataset.attrs[attr_inputPattSize] = dataset.num_inputs
+        hdf_dataset.attrs[HDF_INPUT_PATT_SIZE_KEY] = dataset.num_inputs
 
         print("All done.", file=log.v3)

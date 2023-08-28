@@ -10,13 +10,10 @@ import numpy
 from .cached import CachedDataset
 from .basic import DatasetSeq
 from returnn.log import log
+from .util.hdf import HDF_SEQ_LENGTHS_KEY, HDF_INPUT_PATT_SIZE_KEY, HDF_TIMES_KEY
 from .util.hdf import SimpleHDFWriter, HDFDatasetWriter  # noqa, classes were moved
 
 # Common attribute names for HDF dataset, which should be used in order to be proceed with HDFDataset class.
-attr_seqLengths = "seqLengths"
-attr_inputPattSize = "inputPattSize"
-attr_times = "times"
-attr_ctcIndexTranscription = "ctcIndexTranscription"
 
 
 class HDFDataset(CachedDataset):
@@ -106,9 +103,9 @@ class HDFDataset(CachedDataset):
         print("parsing file", filename, file=log.v5)
         if "times" in fin:
             if self.timestamps is None:
-                self.timestamps = fin[attr_times][...]
+                self.timestamps = fin[HDF_TIMES_KEY][...]
             else:
-                self.timestamps = numpy.concatenate([self.timestamps, fin[attr_times][...]], axis=0)
+                self.timestamps = numpy.concatenate([self.timestamps, fin[HDF_TIMES_KEY][...]], axis=0)
         prev_target_keys = None
         if len(self.files) >= 2:
             prev_target_keys = self.target_keys
@@ -117,7 +114,7 @@ class HDFDataset(CachedDataset):
         else:
             self.target_keys = ["classes"]
 
-        seq_lengths = fin[attr_seqLengths][...]  # shape (num_seqs,num_target_keys + 1)
+        seq_lengths = fin[HDF_SEQ_LENGTHS_KEY][...]  # shape (num_seqs,num_target_keys + 1)
         num_input_keys = 1 if "inputs" in fin else 0
         if len(seq_lengths.shape) == 1:
             seq_lengths = numpy.array(
@@ -163,9 +160,12 @@ class HDFDataset(CachedDataset):
         if "inputs" in fin:
             assert "data" not in self.target_keys, "Cannot use 'data' key for both a target and 'inputs'."
             if len(fin["inputs"].shape) == 1:  # sparse
-                num_inputs = [int(fin.attrs[attr_inputPattSize]), 1]
+                num_inputs = [int(fin.attrs[HDF_INPUT_PATT_SIZE_KEY]), 1]
             else:
-                num_inputs = [int(fin["inputs"].shape[1]), len(fin["inputs"].shape)]  # fin.attrs[attr_inputPattSize]
+                num_inputs = [
+                    int(fin["inputs"].shape[1]),
+                    len(fin["inputs"].shape),
+                ]  # fin.attrs[HDF_INPUT_PATT_SIZE_KEY]
         else:
             num_inputs = [0, 0]
         if self.num_inputs == 0:
