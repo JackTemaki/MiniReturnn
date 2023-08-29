@@ -135,9 +135,8 @@ def test_OggZipDataset():
         print("raw:", raw)
         print("orth:", orth)
         print("classes:", classes)
-        assert isinstance(raw, numpy.ndarray) and raw.dtype.name.startswith("str") and raw.shape == ()
-        raw_ = raw.item()
-        assert isinstance(raw_, str) and raw_ == _demo_txt
+        assert isinstance(raw, list) and isinstance(raw[0], str)
+        assert raw[0] == _demo_txt
         assert isinstance(orth, numpy.ndarray) and orth.dtype == numpy.uint8 and orth.ndim == 1
         orth_ = orth.tostring()
         assert orth_.decode("utf8") == _demo_txt
