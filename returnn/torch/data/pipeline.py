@@ -46,6 +46,8 @@ def create_tensor(value: InputType) -> OutputType:
 
     # The only supported PyTorch dtypes are:
     # float64, float32, float16, complex64, complex128, int64, int32, int16, int8, uint8, and bool.
+    if value.dtype.kind in "UO":  # string (unicode) or object in numpy array
+        return value  # keep as-is
     if value.dtype == np.uint32:
         value = np.asarray(value, dtype=np.int64)
     return torch.tensor(value)

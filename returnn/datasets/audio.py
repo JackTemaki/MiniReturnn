@@ -444,7 +444,7 @@ class OggZipDataset(CachedDataset2):
         orth = numpy.array(orth, dtype="uint8")
         return DatasetSeq(
             features=features,
-            targets={"classes": targets, "raw": txt, "orth": orth},
+            targets={"classes": targets, "raw": numpy.asarray(txt), "orth": orth},
             seq_idx=corpus_seq_idx,
             seq_tag=seq_tag,
         )
