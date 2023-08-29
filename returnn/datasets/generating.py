@@ -71,13 +71,20 @@ class GeneratingDataset(Dataset):
             self._seq_order = None
             self._num_seqs = self._total_num_seqs
         else:
-            self._seq_order = self.get_seq_order_for_epoch(epoch=epoch, num_seqs=self._total_num_seqs, get_seq_len=None)
+            seq_order = self.get_seq_order_for_epoch(epoch=epoch, num_seqs=self._total_num_seqs, get_seq_len=None)
+            self._seq_order = self.apply_sharding(seq_order)
             self._num_seqs = len(self._seq_order)
         self._num_timesteps = 0
         self.reached_final_seq = False
         self.expected_load_seq_start = 0
         self.added_data = []
         return True
+
+    def supports_sharding(self) -> bool:
+        """
+        All generating datasets support sharding if they have a limited number of sequences
+        """
+        return self._total_num_seqs != float("inf")
 
     def _cleanup_old_seqs(self, seq_idx_end):
         i = 0
