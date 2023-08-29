@@ -12,6 +12,11 @@ Current Master 0.2 (+git)
     - remove unused horovod code
     - refactor HDF datasets: split NextGenHDF into a new file and rename to StreamHDFDataset, move HDF writer helpers to util/
     - remove normalization dataset and siamese dataset
+- merge OggZipDataset Test from upstream
+- allow for ndarray containing strings in ``create_tensor``
+- Do not move Tensor to target device in ``collate_batch``, which caused that the dataloader threads reserves GPU memory
+
+
 
 
 Version 0.2

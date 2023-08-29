@@ -76,11 +76,11 @@ def collate_batch(batch: List[Dict[str, InputType]], device: str = "cpu") -> Dic
         if num_axis > 0:
             padded = torch.nn.utils.rnn.pad_sequence(ls, batch_first=True, padding_value=0)
             for i in range(num_axis):
-                res["%s:size%i" % (key, i + 1)] = torch.tensor([v.shape[i] for v in ls]).to(device)
+                res["%s:size%i" % (key, i + 1)] = torch.tensor([v.shape[i] for v in ls])
         else:
             padded = torch.stack(ls)
-        res[key] = padded.to(device)
-        res["%s:size0" % key] = torch.tensor(len(ls)).to(device)
+        res[key] = padded
+        res["%s:size0" % key] = torch.tensor(len(ls))
 
     return res
 
