@@ -2,6 +2,18 @@ Changelog
 =========
 
 
+Current Master 0.2 (+git)
+-------------------------
+
+- Further various code cleanup (`<https://github.com/JackTemaki/MiniReturnn/pull/9>`_):
+    - remove commented code in __main__ and make not-implemented messages more verbose
+    - remove dead code in datastes/util/vocabulary.py
+    - remove unused torch/tensor_utils.py
+    - remove unused horovod code
+    - refactor HDF datasets: split NextGenHDF into a new file and rename to StreamHDFDataset, move HDF writer helpers to util/
+    - remove normalization dataset and siamese dataset
+
+
 Version 0.2
 -----------
 

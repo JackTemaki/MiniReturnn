@@ -749,7 +749,6 @@ def _init_base(configfile=None, target_mode=None, epoch=None, sprint_opts=None):
 
     global engine
     if not engine:
-        rnn.print_task_properties()
         rnn.init_engine()
         engine = rnn.engine
         assert isinstance(engine, Engine)

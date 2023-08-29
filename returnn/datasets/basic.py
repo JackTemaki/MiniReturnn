@@ -153,10 +153,7 @@ class Dataset(object):
         if not config:
             return 0
         if config.is_true("use_horovod"):
-            import returnn.tf.horovod
-
-            if returnn.tf.horovod.get_ctx().is_dataset_distribution_random_seed_offset():
-                return returnn.tf.horovod.get_ctx().rank() * 16127
+            raise NotImplementedError("dataset random seed offset for horovod is currently not supported")
         return 0
 
     @staticmethod

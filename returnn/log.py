@@ -183,15 +183,7 @@ class Log:
         log_verbosity = config.int_list("log_verbosity", [])
         log_format = config.list("log_format", [])
         if config.is_true("use_horovod"):
-            import returnn.tf.horovod
-
-            hvd = returnn.tf.horovod.get_ctx(config=config)
-            new_logs = []
-            for fn in logs:
-                fn_prefix, fn_ext = os.path.splitext(fn)
-                fn_ext = ".horovod-%i-%i%s" % (hvd.rank(), hvd.size(), fn_ext)
-                new_logs.append(fn_prefix + fn_ext)
-            logs = new_logs
+            raise NotImplementedError("Horovod is currently not supported")
         self.initialize(logs=logs, verbosity=log_verbosity, formatter=log_format)
 
     def print_warning(self, text, prefix_text="WARNING:", extra_text=None):
@@ -294,42 +286,3 @@ class StreamDummy:
         """
         Ignored.
         """
-
-
-@contextlib.contextmanager
-def wrap_log_streams(alternative_stream, also_sys_stdout=False, tf_log_verbosity=None):
-    """
-    :param StreamThreadLocal|StreamDummy alternative_stream:
-    :param bool also_sys_stdout: wrap sys.stdout as well
-    :param int|str|None tf_log_verbosity: e.g. "WARNING"
-    :return: context manager which yields (original info stream v1, alternative_stream)
-    """
-    v_attrib_keys = ["v%i" % i for i in range(6)] + ["error"]
-    # Store original values.
-    orig_v_list = log.v
-    orig_v_attribs = {key: getattr(log, key) for key in v_attrib_keys}
-    orig_stdout = sys.stdout
-    log.v = [alternative_stream] * len(orig_v_list)
-    for key in v_attrib_keys:
-        setattr(log, key, alternative_stream)
-    if also_sys_stdout:
-        sys.stdout = alternative_stream
-    orig_tf_log_verbosity = None
-    if tf_log_verbosity is not None:
-        import returnn.tf.compat as tf_compat
-
-        orig_tf_log_verbosity = tf_compat.v1.logging.get_verbosity()
-        tf_compat.v1.logging.set_verbosity(tf_log_verbosity)
-    try:
-        yield orig_v_attribs["v1"], alternative_stream
-    finally:
-        # Restore original values.
-        log.v = orig_v_list
-        for key, value in orig_v_attribs.items():
-            setattr(log, key, value)
-        if also_sys_stdout:
-            sys.stdout = orig_stdout
-        if tf_log_verbosity is not None:
-            import returnn.tf.compat as tf_compat
-
-            tf_compat.v1.logging.set_verbosity(orig_tf_log_verbosity)
