@@ -4,14 +4,6 @@ This defines the base dataset class :class:`Dataset`.
 
 from __future__ import annotations
 
-__author__ = "Patrick Doetsch"
-__copyright__ = "Copyright 2015"
-__credits__ = ["Patrick Doetsch", "Paul Voigtlaender"]
-__license__ = "RWTHASR"
-__version__ = "0.9"
-__maintainer__ = "Patrick Doetsch"
-__email__ = "doetsch@i6.informatik.rwth-aachen.de"
-
 from threading import RLock
 from random import Random
 import numpy
@@ -773,6 +765,8 @@ class Dataset(object):
 class DatasetSeq:
     """
     Encapsulates all data for one sequence.
+
+    TODO: "targets" is only kept for legacy API, to be removed in the future
     """
 
     def __init__(self, seq_idx, features, targets=None, seq_tag=None):
@@ -822,7 +816,7 @@ class DatasetSeq:
         return self.features.keys()
 
     def __repr__(self):
-        return "<DataCache seq_idx=%i>" % self.seq_idx
+        return "<DatasetSeq seq_idx=%i>" % self.seq_idx
 
 
 _dataset_classes = {}  # type: Dict[str,Type[Dataset]]
