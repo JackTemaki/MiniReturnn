@@ -8,7 +8,7 @@ import os
 import sys
 
 
-VERSION = "0.1+git"
+VERSION = "0.2+git"
 
 _my_dir = os.path.dirname(os.path.abspath(__file__))
 # Use realpath to resolve any symlinks. We want the real root-dir, to be able to check the Git revision.
@@ -48,5 +48,5 @@ def get_version_str():
                 print("Exception while getting Git version:", exc)
                 sys.excepthook(*sys.exc_info())
                 raise  # no fallback anymore
-
-    raise Exception("Cannot get RETURNN version.")
+    else:
+        return VERSION

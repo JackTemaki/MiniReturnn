@@ -2,9 +2,20 @@ Changelog
 =========
 
 
+Current Master 0.2 (+git)
+-------------------------
 
-Current Master (0.1+git)
-------------------------
+- Further various code cleanup (`<https://github.com/JackTemaki/MiniReturnn/pull/9>`_):
+    - remove commented code in __main__ and make not-implemented messages more verbose
+    - remove dead code in datastes/util/vocabulary.py
+    - remove unused torch/tensor_utils.py
+    - remove unused horovod code
+    - refactor HDF datasets: split NextGenHDF into a new file and rename to StreamHDFDataset, move HDF writer helpers to util/
+    - remove normalization dataset and siamese dataset
+
+
+Version 0.2
+-----------
 
 - provide ``epoch`` and ``step`` in ``RunCtx`` (`<https://github.com/JackTemaki/MiniReturnn/pull/4>`_)
 - ``allow_missing_optimizer_checkpoint`` config parameter to allow the usage of a fresh optimizer in case the optimizer checkpoint for the chosen epoch can't be found
@@ -15,6 +26,10 @@ Current Master (0.1+git)
 - merge upstream https://github.com/rwth-i6/returnn/pull/1358 (min_chunk_size parameter)
 - add ``tools/torch_export_to_onnx.py``
 - merge upstream https://github.com/rwth-i6/returnn/pull/1364 (fix in cleanup_models regarding learning rate control)
+- fix missing run_ctx init in onnx export
+- integrate gradient clipping/norm: https://github.com/JackTemaki/MiniReturnn/pull/6
+- print CUDA memory information
+- small fix for checkpoint loading: https://github.com/JackTemaki/MiniReturnn/pull/8
 
 
 Version 0.1

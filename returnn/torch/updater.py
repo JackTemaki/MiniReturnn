@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import gc
 import torch
+from torch.cuda import amp
 import typing
 from typing import Any, Dict
 
@@ -92,6 +93,17 @@ class Updater(object):
         self._device = device
         self.optimizer = None  # type: typing.Optional[torch.optim.Optimizer]
 
+        self._grad_scaler = None  # type: amp.GradScaler
+
+        self._grad_clip = self.config.float("gradient_clip", None)
+        self._grad_clip_norm = self.config.float("gradient_clip_norm", None)
+
+    def create_grad_scaler(self):
+        """
+        Creates an AMP gradient scaler
+        """
+        self._grad_scaler = amp.GradScaler()
+
     def set_learning_rate(self, value):
         """
         Updates the learning rate of the optimizer at each (sub)epoch.
@@ -145,6 +157,33 @@ class Updater(object):
         :rtype: torch.optim.Optimizer
         """
         return self.optimizer
+
+    def step(self, loss):
+        """
+        Executes backpropagation of the loss, handles AMP if necessary and calls the updater step.
+
+        :param torch.Tensor loss: The total loss of the current step
+        """
+        self.optimizer.zero_grad()
+
+        if self._grad_scaler is not None:
+            self._grad_scaler.scale(loss).backward()
+            self._grad_scaler.unscale_(self.optimizer)
+        else:
+            loss.backward()
+
+        if self._grad_clip is not None:
+            torch.nn.utils.clip_grad_value_(self.network.parameters(), self._grad_clip)
+
+        if self._grad_clip_norm is not None:
+            torch.nn.utils.clip_grad_norm_(self.network.parameters(), self._grad_clip_norm)
+
+        if self._grad_scaler is not None:
+            self._grad_scaler.step(self.optimizer)
+
+            self._grad_scaler.update()
+        else:
+            self.optimizer.step()
 
     def _create_optimizer(self, optimizer_opts):
         """

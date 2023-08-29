@@ -178,27 +178,6 @@ class Vocabulary(object):
             return CharacterTargets(vocab_file=None, labels=labels, **kwargs)
         return Vocabulary(vocab_file=None, labels=labels, **kwargs)
 
-    def tf_get_init_variable_func(self, var):
-        """
-        :param tensorflow.Variable var:
-        :rtype: (tensorflow.Session)->None
-        """
-        import tensorflow as tf
-        from returnn.tf.util.basic import VariableAssigner
-
-        assert isinstance(var, tf.Variable)
-        assert var.dtype.base_dtype == tf.string
-        assert var.shape.as_list() == [self.num_labels]
-        assert len(self._labels) == self.num_labels
-
-        def init_vocab_var(session):
-            """
-            :param tensorflow.Session session:
-            """
-            VariableAssigner(var).assign(session=session, value=self._labels)
-
-        return init_vocab_var
-
     def to_id(self, label, default=KeyError, allow_none=False):
         """
         :param str|int|None label:

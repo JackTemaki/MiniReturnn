@@ -141,6 +141,9 @@ class EngineBase(object):
                 config.value("load", ""),
                 load_model_epoch_filename + cls.get_file_postfix(),
             )
+            # If "load" is given and we are not training, always load explicitly
+            if config.value("task", "train") != "train":
+                return None, load_model_epoch_filename
 
         if config.value("task", "train") == "train":
             start_epoch_mode = config.value("start_epoch", "auto")

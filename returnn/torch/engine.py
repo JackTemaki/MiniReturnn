@@ -70,7 +70,6 @@ class Engine(EngineBase):
         print(f"Using device {self._device}", file=log.v3)
 
         self._amp_dtype = None  # type: Optional[torch.dtype]
-        self._grad_scaler = None  # type: Optional[amp.GradScaler]
 
     def init_train(
         self,
@@ -117,7 +116,7 @@ class Engine(EngineBase):
             amp_dtype_str = amp_options.get("dtype")
             assert amp_dtype_str in ["float16", "bfloat16"]
             self._amp_dtype = getattr(torch, amp_dtype_str)
-            self._grad_scaler = amp.GradScaler()
+            self._updater.create_grad_scaler()
 
     def init_forward(
         self,
@@ -388,9 +387,7 @@ class Engine(EngineBase):
         losses_dict = run_ctx.losses
         total_loss = run_ctx.total_loss()
 
-        self._updater.get_optimizer().zero_grad()
-        total_loss.backward()
-        self._updater.get_optimizer().step()
+        self._updater.step(total_loss)
 
         return total_loss, losses_dict
 
@@ -424,7 +421,7 @@ class Engine(EngineBase):
         with autocast(device_type=self._device, dtype=self._amp_dtype) if self._amp_dtype else nullcontext():
             self._forward_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
 
-    def _load_model(self, *, epoch: int, filename: Optional[str]):
+    def _load_model(self, *, epoch: Optional[int], filename: Optional[str] = None):
         """
         Sets self._model to a torch.nn.Module.
 
@@ -447,6 +444,7 @@ class Engine(EngineBase):
                 epoch = checkpoint_state["epoch"]
             else:
                 step = 0
+                
         else:
             step = 0
             # TODO: the epoch handling might still be inconsistent
@@ -628,9 +626,15 @@ class Engine(EngineBase):
         :param loss_dict:
         """
         if log.verbose[5]:
-            info = [report_prefix, "step %i" % step, "took: %.3f" % (time.time() - step_start_time)]
+
+            info = [report_prefix, "step:%i" % step, "step time: %.3f" % (time.time() - step_start_time)]
             if hasattr(self, "time_since_last_step"):
-                info += ["step time: %.3f" % (time.time() - self.time_since_last_step)]
+                info += ["total time: %.3f" % (time.time() - self.time_since_last_step)]
+            if self._device == "cuda":
+                t = torch.cuda.get_device_properties(0).total_memory / (1024**3)
+                r = torch.cuda.max_memory_reserved(0) / (1024**3)
+                a = torch.cuda.max_memory_allocated(0) / (1024**3)
+                info += ["GMEM: %.1f/%.1f/%.1f" % (a, r, t)]
             if total_loss is not None:
                 info += ["total (grad) loss: %f" % total_loss]
             if loss_dict is not None:

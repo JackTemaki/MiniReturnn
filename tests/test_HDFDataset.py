@@ -18,6 +18,7 @@ import os
 import unittest
 import better_exchook
 
+from returnn.datasets.util.hdf import SimpleHDFWriter, HDFDatasetWriter
 
 my_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -744,55 +745,6 @@ def test_HDFDataset_deepcopy():
     num_seqs = dummy_iter_dataset(ds)
     num_seqs_copy = dummy_iter_dataset(ds_copy)
     assert num_seqs == num_seqs_copy
-
-
-def test_siamese_triplet_sampling():
-    datasets_path = generate_dummy_hdf(3)
-    dataset = SiameseHDFDataset(input_stream_name="features", seq_label_stream="classes", files=datasets_path)
-
-    dataset.initialize()
-    for iter in range(1, 31):
-        print("Initializing triplets... iteration %d" % iter)
-        dataset.init_seq_order(epoch=iter)
-
-        triplets = dataset.curr_epoch_triplets
-        anchor_seq_names = [dataset.all_seq_names[id[0]] for id in triplets]
-        same_class_seq_names = [dataset.all_seq_names[id[1]] for id in triplets]
-        diff_class_seq_names = [dataset.all_seq_names[id[2]] for id in triplets]
-
-        anchor_class = [dataset.seq_to_target[seq_id] for seq_id in anchor_seq_names]
-        same_class = [dataset.seq_to_target[seq_id] for seq_id in same_class_seq_names]
-        diff_class = [dataset.seq_to_target[seq_id] for seq_id in diff_class_seq_names]
-
-        print("Testing pair sequences to belong to the same class...")
-        assert all(ac == same_class[id] for id, ac in enumerate(anchor_class))
-        print("Testing third element in a triplet to belong to a different class...")
-        assert all(ac != diff_class[id] for id, ac in enumerate(anchor_class))
-        print("------------------------------------------------------")
-
-    print("Deleting temporary files...")
-    for path in datasets_path:
-        os.remove(path)
-    print("Done.")
-
-
-def test_siamese_collect_single_seq():
-    datasets_path = generate_dummy_hdf(3)
-    dataset = SiameseHDFDataset(input_stream_name="features", seq_label_stream="classes", files=datasets_path)
-
-    dataset.initialize()
-    dataset.init_seq_order(epoch=1)
-
-    random = np.random.RandomState()
-    seq_idx = random.randint(low=0, high=len(dataset.seq_name_to_idx))
-    dataset_seq = dataset._collect_single_seq(seq_idx)
-    print("Verify that single sequence consists of a triplet...")
-    print(dataset_seq.features.keys())
-
-    print("Deleting temporary files...")
-    for path in datasets_path:
-        os.remove(path)
-    print("Done.")
 
 
 if __name__ == "__main__":
