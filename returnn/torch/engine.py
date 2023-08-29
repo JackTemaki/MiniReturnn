@@ -444,7 +444,7 @@ class Engine(EngineBase):
                 epoch = checkpoint_state["epoch"]
             else:
                 step = 0
-                
+
         else:
             step = 0
             # TODO: the epoch handling might still be inconsistent
