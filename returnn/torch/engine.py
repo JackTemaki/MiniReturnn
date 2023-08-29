@@ -380,6 +380,7 @@ class Engine(EngineBase):
         :return: total loss (weighted sum) calculated for the step, and individual losses as a name -> value mapping
         """
         assert isinstance(data, dict) and data
+        data = self.move_data_to_device(data)
         sentinel_kw = {"__fwd_compatible_random_arg_%i" % int(random() * 100): None}
         with autocast(device_type=self._device, dtype=self._amp_dtype) if self._amp_dtype else nullcontext():
             self._train_step_func(model=self._model, data=data, run_ctx=run_ctx, **sentinel_kw)
@@ -398,6 +399,7 @@ class Engine(EngineBase):
         :return: total loss (weighted sum) calculated for the step, and individual losses as a name -> value mapping
         """
         assert isinstance(data, dict) and data
+        data = self.move_data_to_device(data)
         sentinel_kw = {"__fwd_compatible_random_arg_%i" % int(random() * 100): None}
         # currently we only support the _train_step_func,
         # this can be an optional _eval_step_func later on
@@ -415,6 +417,7 @@ class Engine(EngineBase):
         :param run_ctx: the current run ctx object
         """
         assert isinstance(data, dict) and data
+        data = self.move_data_to_device(data)
         sentinel_kw = {"__fwd_compatible_random_arg_%i" % int(random() * 100): None}
         # currently we only support the _train_step_func,
         # this can be an optional _eval_step_func later on
@@ -593,6 +596,17 @@ class Engine(EngineBase):
                 print(f"Accumulated losses: {accumulated_scores}", file=log.v1)
             print(f"Step losses: {scores}", file=log.v1)
             raise Exception(f"Inf/nan loss in epoch {self.epoch}, step {self._train_step}.")
+
+    def move_data_to_device(self, data: dict[str, torch.Tensor]) -> dict[str, torch.Tensor]:
+        """
+        Place Tensors on the desired devices.
+
+        Currently moves all tensors to the target device, e.g. GPU.
+
+        :param data: the data dict with tensors to be placed onto the desired devices
+        :return: data placed on the desired device
+        """
+        return {k: v.to(self._device) if isinstance(v, Tensor) else v for k, v in data.items()}
 
     @staticmethod
     def delete_model(filename):
