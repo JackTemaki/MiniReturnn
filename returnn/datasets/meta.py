@@ -414,6 +414,8 @@ class MetaDataset(CachedDataset2):
                 self.orig_seq_order_is_initialized = False
                 get_seq_len = self._get_dataset_seq_length
             seq_index = self.get_seq_order_for_epoch(epoch, self.num_total_seqs, get_seq_len)
+        # apply optional sharding
+        seq_index = self.apply_sharding(seq_index)
         self._num_seqs = len(seq_index)
         self.seq_list_ordered = {key: [ls[s] for s in seq_index] for (key, ls) in self.seq_list_original.items()}
 
@@ -422,6 +424,12 @@ class MetaDataset(CachedDataset2):
             if dataset is seq_order_dataset:
                 continue
             dataset.init_seq_order(epoch=epoch, seq_list=self.seq_list_ordered[dataset_key])
+        return True
+
+    def supports_sharding(self) -> bool:
+        """
+        MetaDataset always supports sharding as it needs a known sequence index order
+        """
         return True
 
     def get_current_seq_order(self):

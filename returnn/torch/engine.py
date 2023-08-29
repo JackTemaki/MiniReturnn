@@ -365,10 +365,14 @@ class Engine(EngineBase):
             batches_dataset, collate_fn=partial(data_pipeline.collate_batch, device=self._device)
         )
 
+        num_workers = self.config.int("num_workers_per_gpu", 1)
+        if num_workers > 1:
+            assert dataset.supports_sharding(), "Dataset does not support sharding but 'num_workers_per_gpu' is > 0"
+
         return DataLoader(
             dataset=batches_dataset,
             batch_size=None,
-            num_workers=1,
+            num_workers=num_workers,
             multiprocessing_context="spawn",
             persistent_workers=True,
         )

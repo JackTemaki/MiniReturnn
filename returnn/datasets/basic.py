@@ -15,6 +15,9 @@ from returnn.datasets.util.vocabulary import Vocabulary
 from returnn.util.basic import try_run, NumbersDict, OptionalNotImplementedError, cf
 from returnn.log import log
 
+# TODO: does depend fixed on torch now, can be made cleaner in the future
+from torch.utils.data import get_worker_info
+
 
 class Dataset(object):
     """
@@ -427,6 +430,29 @@ class Dataset(object):
         assert len(seq_index) == partition_sizes[current_partition]
 
         return seq_index
+
+    def apply_sharding(self, seq_index):
+        """
+        Apply PyTorch sharding to support multiple dataloader workers
+
+        :param typing.Sequence[int] seq_index: full list of ordered sequence indices
+        :rtype: typing.Sequence[int]
+        """
+        worker_info = get_worker_info()
+        if worker_info:
+            print(f"Applied sharding of {self.name} with id {worker_info.id}/{worker_info.num_workers}", file=log.v4)
+            # Perform sharding
+            if worker_info.num_workers > 1:
+                seq_index = seq_index[worker_info.id :: worker_info.num_workers]
+        else:
+            print(f"Applied sharding of {self.name} outside of the dataloader", file=log.v4)
+        return seq_index
+
+    def supports_sharding(self) -> bool:
+        """
+        If the dataset can be sharded
+        """
+        return False
 
     def _get_random_seed_for_epoch(self, epoch, num_epochs_fixed=1):
         """
