@@ -438,17 +438,13 @@ class OggZipDataset(CachedDataset2):
             features = numpy.zeros((), dtype=numpy.float32)  # currently the API requires some dummy values...
         targets, txt = self._get_transcription(corpus_seq_idx)
         targets = numpy.array(targets, dtype="int32")
-        raw_txt = numpy.array(txt, dtype="object")
         orth = txt.encode("utf8")
         assert isinstance(orth, bytes)
         orth = list(orth)
         orth = numpy.array(orth, dtype="uint8")
         return DatasetSeq(
             features=features,
-            # TODO: temporarily disable raw and orth which causes
-            #       issues with the PyTorch data pipeline
-            # targets={"classes": targets, "raw": raw_txt, "orth": orth},
-            targets={"classes": targets},
+            targets={"classes": targets, "raw": txt, "orth": orth},
             seq_idx=corpus_seq_idx,
             seq_tag=seq_tag,
         )
