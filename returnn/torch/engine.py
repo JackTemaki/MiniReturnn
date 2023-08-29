@@ -86,18 +86,26 @@ class Engine(EngineBase):
         for dataset_name, dataset in self.eval_datasets.items():
             self._eval_dataloaders[dataset_name] = self._create_data_loader(dataset)
 
-        self._start_epoch = self.get_train_start_epoch(self.config)
+        self._start_epoch, filename = self.get_epoch_model(self.config)
+
+        if self._start_epoch is not None:
+            self._start_epoch += 1
+        else:
+            self._start_epoch = 1
+
         self._final_epoch = self.config_get_final_epoch(self.config)
 
-        self._load_model(epoch=self._start_epoch)
+        self._load_model(epoch=self._start_epoch, filename=filename)
+
         self._save_model_epoch_interval = self.config.int("save_interval", 1)
 
         self._updater = Updater(
             config=self.config, network=self._model, device=self._device, initial_learning_rate=self.learning_rate
         )
         self._updater.create_optimizer()
+
         if self._start_epoch > 1:
-            self._load_optimizer(self._start_epoch)
+            self._load_optimizer(self._start_epoch, filename=filename + ".opt.pt")
 
         self._train_step_func = self.config.typed_value("train_step")
         assert self._train_step_func, "train_step not defined"
@@ -120,12 +128,12 @@ class Engine(EngineBase):
         super().init_forward(forward_data=forward_data)
         self._forward_dataloader = self._create_data_loader(self.forward_dataset)
 
-        self._start_epoch, filename = self.get_epoch_model(self.config)
+        _, filename = self.get_epoch_model(self.config)
 
         # for now assume we only do forward within one epoch setting
         self._final_epoch = self._start_epoch
 
-        self._load_model(epoch=self._start_epoch, filename=filename)
+        self._load_model(epoch=None, filename=filename)
 
         self._forward_step_func = self.config.typed_value("forward_step")
         assert self._forward_step_func, "forward_step not defined"
@@ -420,27 +428,23 @@ class Engine(EngineBase):
         In case of running on CPU we move all objects to the CPU,
         otherwise we keep the original assignment.
 
-        :param epoch: e.g. via BaseEngine.get_train_start_epoch()
+        :param epoch: e.g. via BaseEngine.get_epoch_model()
+        :param filename: Filename of checkpoint that needs to be loaded to initiliaze the parameters, e.g. coming from BaseEngine.get_epoch_model()
         """
         checkpoint_state = None
         if filename is not None:
             print("Load model %s" % (filename,), file=log.v4)
             checkpoint_state = torch.load(
-                filename + ".pt",
+                filename + self.get_file_postfix(),
                 map_location=self._device,
             )
-            step = checkpoint_state["step"]
-            self._start_epoch = self._final_epoch = checkpoint_state["epoch"]
+
             if epoch is None:
-                epoch = self._start_epoch
+                step = checkpoint_state["step"]
+                epoch = checkpoint_state["epoch"]
             else:
-                assert epoch == self._start_epoch
-        elif epoch is not None and epoch > 1:
-            filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".pt"
-            print("Load model %s" % (filename,), file=log.v4)
-            checkpoint_state = torch.load(filename, map_location=self._device)
-            assert checkpoint_state["epoch"] == epoch - 1
-            step = checkpoint_state["step"]
+                step = 0
+                
         else:
             step = 0
             # TODO: the epoch handling might still be inconsistent
@@ -536,14 +540,17 @@ class Engine(EngineBase):
         print("Save model under %s" % (filename,), file=log.v4)
         torch.save({"model": self._model.state_dict(), "epoch": self.epoch, "step": self._train_step}, filename)
 
-    def _load_optimizer(self, epoch):
+    def _load_optimizer(self, epoch, filename=None):
         """
         Loads a torch.optim.Optimizer from disk and uses it as the optimizer.
         This function is a wrapper to Updater.load_optimizer().
 
         :param int epoch: Epoch from which to load the optimizer state.
+        :param filename (Optional): Filename of optimizer state
         """
-        filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".opt.pt"
+        if filename is None:
+            filename = self.get_epoch_model_filename(epoch=epoch - 1) + ".opt.pt"
+
         if os.path.isfile(filename):
             self._updater.load_optimizer(filename)
         elif self.config.bool("allow_missing_optimizer_checkpoint", False):
@@ -552,9 +559,7 @@ class Engine(EngineBase):
                 file=log.v4,
             )
         else:
-            raise Exception(
-                f"Optimizer file {filename} not found and use_fresh_optimizer_for_missing_checkpoint is False"
-            )
+            raise Exception(f"Optimizer file {filename} not found and allow_missing_optimizer_checkpoint is False")
 
     def _save_optimizer(self):
         """
