@@ -53,9 +53,14 @@ def test_max_seq_len():
 def test_multiple_workers():
 
     from returnn.datasets.generating import DummyDataset
+    from returnn.datasets.meta import MetaDataset
 
     config = Config({"max_seqs": 8, "num_workers_per_gpu": 1, "batch_size": 8000})
-    dataset = DummyDataset(input_dim=1, output_dim=4, num_seqs=8, seq_len=5)
+    dataset = MetaDataset(
+        datasets={"dataset": DummyDataset(input_dim=1, output_dim=4, num_seqs=8, seq_len=5)},
+        data_map={"data": ("dataset", "data")},
+        seq_order_control_dataset="dataset"
+    )
     engine = Engine(config=config)
     data_loader = engine._create_data_loader(dataset)
     # we had 8 sequences and a max batch size of 8, one worker, so one batch of 8
@@ -65,7 +70,11 @@ def test_multiple_workers():
     assert i == 0  # should have had one batch
 
     config = Config({"max_seqs": 8, "num_workers_per_gpu": 2, "batch_size": 8000})
-    dataset = DummyDataset(input_dim=1, output_dim=4, num_seqs=8, seq_len=5)
+    dataset = MetaDataset(
+        datasets={"dataset": DummyDataset(input_dim=1, output_dim=4, num_seqs=8, seq_len=5)},
+        data_map={"data": ("dataset", "data")},
+        seq_order_control_dataset="dataset"
+    )
     engine = Engine(config=config)
     data_loader = engine._create_data_loader(dataset)
     # we had 8 sequences and a max batch size of 8, but as we have two workers

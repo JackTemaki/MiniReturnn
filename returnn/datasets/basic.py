@@ -431,21 +431,28 @@ class Dataset(object):
 
         return seq_index
 
+    def is_sharding_enabled(self):
+        """
+        We are in PyTorch Dataloader with num_workers > 1
+        """
+        worker_info = get_worker_info()
+        if worker_info and worker_info.num_workers > 1:
+            return True
+        return False
+
     def apply_sharding(self, seq_index):
         """
         Apply PyTorch sharding to support multiple dataloader workers
 
         :param typing.Sequence[int] seq_index: full list of ordered sequence indices
-        :rtype: typing.Sequence[int]
+        :rtype: typing.Sequence[int], bool
         """
         worker_info = get_worker_info()
-        if worker_info:
+        if self.is_sharding_enabled():
             print(f"Applied sharding of {self.name} with id {worker_info.id}/{worker_info.num_workers}", file=log.v4)
-            # Perform sharding
-            if worker_info.num_workers > 1:
-                seq_index = seq_index[worker_info.id :: worker_info.num_workers]
-        else:
-            print(f"Applied sharding of {self.name} outside of the dataloader", file=log.v4)
+            seq_index = seq_index[worker_info.id :: worker_info.num_workers]
+            return seq_index
+        print(f"Applied sharding of {self.name} outside of the dataloader or num_workers = 1", file=log.v4)
         return seq_index
 
     def supports_sharding(self) -> bool:
