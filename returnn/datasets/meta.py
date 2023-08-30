@@ -202,7 +202,7 @@ class MetaDataset(CachedDataset2):
         **kwargs,
     ):
         """
-        :param dict[str,dict[str]] datasets: dataset-key -> dataset-kwargs. including keyword 'class' and maybe 'files'
+        :param dict[str, dict[str]|Dataset] datasets: dataset-key -> dataset-kwargs. including keyword 'class' and maybe 'files'
         :param dict[str,(str,str)] data_map: self-data-key -> (dataset-key, dataset-data-key).
           Should contain 'data' as key. Also defines the target-list, which is all except 'data'.
         :param str|None seq_list_file: filename. pickle. dict[str,list[str]], dataset-key -> list of sequence tags.
@@ -414,14 +414,19 @@ class MetaDataset(CachedDataset2):
                 self.orig_seq_order_is_initialized = False
                 get_seq_len = self._get_dataset_seq_length
             seq_index = self.get_seq_order_for_epoch(epoch, self.num_total_seqs, get_seq_len)
-        # apply optional sharding
-        seq_index = self.apply_sharding(seq_index)
+        # apply optional sharding if not already covered by the control dataset
+        sharding_in_meta = False
+        if self.is_sharding_enabled() and not self.datasets[self.seq_order_control_dataset].supports_sharding():
+            sharding_in_meta = True
+            seq_index = self.apply_sharding(seq_index)
         self._num_seqs = len(seq_index)
         self.seq_list_ordered = {key: [ls[s] for s in seq_index] for (key, ls) in self.seq_list_original.items()}
 
         for dataset_key, dataset in self.datasets.items():
             assert isinstance(dataset, Dataset)
-            if dataset is seq_order_dataset:
+            if dataset is seq_order_dataset and not sharding_in_meta:
+                # only skip if we did not do sharding here, otherwise the sequence list
+                # of the control dataset needs to be rebuilt as well
                 continue
             dataset.init_seq_order(epoch=epoch, seq_list=self.seq_list_ordered[dataset_key])
         return True
