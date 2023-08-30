@@ -59,7 +59,7 @@ def test_multiple_workers():
     dataset = MetaDataset(
         datasets={"dataset": DummyDataset(input_dim=1, output_dim=4, num_seqs=8, seq_len=5)},
         data_map={"data": ("dataset", "data")},
-        seq_order_control_dataset="dataset"
+        seq_order_control_dataset="dataset",
     )
     engine = Engine(config=config)
     data_loader = engine._create_data_loader(dataset)
@@ -73,7 +73,7 @@ def test_multiple_workers():
     dataset = MetaDataset(
         datasets={"dataset": DummyDataset(input_dim=1, output_dim=4, num_seqs=8, seq_len=5)},
         data_map={"data": ("dataset", "data")},
-        seq_order_control_dataset="dataset"
+        seq_order_control_dataset="dataset",
     )
     engine = Engine(config=config)
     data_loader = engine._create_data_loader(dataset)
@@ -89,5 +89,3 @@ def test_multiple_workers():
             assert batch["seq_tag"] == ["seq-1", "seq-3", "seq-5", "seq-7"]
 
     assert i == 1  # should have had two batches
-
-

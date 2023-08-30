@@ -15,8 +15,9 @@ Current Master 0.2 (+git)
 - merge OggZipDataset Test from upstream
 - allow for ndarray containing strings in ``create_tensor``
 - Do not move Tensor to target device in ``collate_batch``, which caused that the dataloader threads reserves GPU memory
-
-
+- Enable multiprocessing in dataloading (`<https://github.com/JackTemaki/MiniReturnn/pull/11>`_)
+    - Introduce `num_workers_for_gpu` flag which allows for multiprocessing with the PT Dataloader
+    - Introduce (automatic) sharding for RETURNN Datasets (For now Generating and MetaDataset) to be able to use multiple dataloader workers
 
 
 Version 0.2
