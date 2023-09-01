@@ -18,6 +18,7 @@ Current Master 0.2 (+git)
 - Enable multiprocessing in dataloading (`<https://github.com/JackTemaki/MiniReturnn/pull/11>`_)
     - Introduce `num_workers_for_gpu` flag which allows for multiprocessing with the PT Dataloader
     - Introduce (automatic) sharding for RETURNN Datasets (For now Generating and MetaDataset) to be able to use multiple dataloader workers
+    - Remove unneeded MultiProcDataset
 
 
 Version 0.2
