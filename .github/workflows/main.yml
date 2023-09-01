@@ -23,7 +23,6 @@ jobs:
           - TEST=test_hdf_dump
           - TEST=test_HDFDataset
           - TEST=test_LearningRateControl
-          - TEST=test_MultiProcDataset
           - TEST=test_SprintDataset
           - TEST=test_TranslationDataset
           - TEST=test_Util
