@@ -98,6 +98,8 @@ class Updater(object):
         self._grad_clip = self.config.float("gradient_clip", None)
         self._grad_clip_norm = self.config.float("gradient_clip_norm", None)
 
+        self._accum_grad_multiple_step = config.int("accum_grad_multiple_step", 1)
+
     def create_grad_scaler(self):
         """
         Creates an AMP gradient scaler
@@ -158,32 +160,44 @@ class Updater(object):
         """
         return self.optimizer
 
-    def step(self, loss):
+    def step(self, loss: torch.Tensor, step_idx: int):
         """
         Executes backpropagation of the loss, handles AMP if necessary and calls the updater step.
 
-        :param torch.Tensor loss: The total loss of the current step
+        For details, explanations and the background for this code see:
+        https://pytorch.org/docs/stable/notes/amp_examples.html
+
+        :param loss: The total loss of the current step
+        :param step_idx: index of the current step, used e.g. for gradient accumulation
         """
-        self.optimizer.zero_grad()
 
         if self._grad_scaler is not None:
             self._grad_scaler.scale(loss).backward()
-            self._grad_scaler.unscale_(self.optimizer)
         else:
             loss.backward()
 
-        if self._grad_clip is not None:
-            torch.nn.utils.clip_grad_value_(self.network.parameters(), self._grad_clip)
+        if (step_idx + 1) % self._accum_grad_multiple_step == 0:
+            if self._grad_scaler is not None:
+                # unscale gradient if using AMP
+                self._grad_scaler.unscale_(self.optimizer)
 
-        if self._grad_clip_norm is not None:
-            torch.nn.utils.clip_grad_norm_(self.network.parameters(), self._grad_clip_norm)
+            # modify the gradient only after accumulation and unscaling
+            if self._grad_clip is not None:
+                torch.nn.utils.clip_grad_value_(self.network.parameters(), self._grad_clip)
 
-        if self._grad_scaler is not None:
-            self._grad_scaler.step(self.optimizer)
+            if self._grad_clip_norm is not None:
+                torch.nn.utils.clip_grad_norm_(self.network.parameters(), self._grad_clip_norm)
 
-            self._grad_scaler.update()
-        else:
-            self.optimizer.step()
+            # perform the actual gradient update on the parameters
+            if self._grad_scaler is not None:
+                self._grad_scaler.step(self.optimizer)
+
+                self._grad_scaler.update()
+            else:
+                self.optimizer.step()
+
+            # remove gradients at the end of gradient accumulation
+            self.optimizer.zero_grad()
 
     def _create_optimizer(self, optimizer_opts):
         """
