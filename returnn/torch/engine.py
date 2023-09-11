@@ -185,7 +185,7 @@ class Engine(EngineBase):
             run_ctx = get_run_ctx()
             run_ctx.init_step(self._train_step)
 
-            total_loss, ctx_losses_dict = self.run_train_step(data, run_ctx)
+            total_loss, ctx_losses_dict = self.run_train_step(data, run_ctx, step_idx)
 
             losses_dict = NumbersDict(
                 {name: float(loss.loss.detach().cpu().numpy()) for name, loss in ctx_losses_dict.items()}
@@ -377,10 +377,13 @@ class Engine(EngineBase):
             persistent_workers=True,
         )
 
-    def run_train_step(self, data: dict[str, torch.Tensor], run_ctx: RunCtx) -> Tuple[Tensor, Dict[str, Loss]]:
+    def run_train_step(
+        self, data: dict[str, torch.Tensor], run_ctx: RunCtx, step_idx: int
+    ) -> Tuple[Tensor, Dict[str, Loss]]:
         """
         :param data: model inputs for the step
         :param run_ctx: the current run ctx object
+        :param step_idx: the current step index passed to the updater
         :return: total loss (weighted sum) calculated for the step, and individual losses as a name -> value mapping
         """
         assert isinstance(data, dict) and data
@@ -392,7 +395,7 @@ class Engine(EngineBase):
         losses_dict = run_ctx.losses
         total_loss = run_ctx.total_loss()
 
-        self._updater.step(total_loss)
+        self._updater.step(total_loss, step_idx)
 
         return total_loss, losses_dict
 
