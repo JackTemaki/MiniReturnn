@@ -26,6 +26,7 @@ from .updater import Updater
 from .data import pipeline as data_pipeline
 from .data import returnn_dataset_wrapper
 from .context import get_run_ctx, init_load_run_ctx, init_train_step_run_ctx, init_forward_step_run_ctx, RunCtx, Loss
+from .functional import diagnose_gpu
 
 
 class Engine(EngineBase):
@@ -63,10 +64,11 @@ class Engine(EngineBase):
 
         self._device = device
         if self._device == "cuda":
-            assert (
-                torch.cuda.is_available() and torch.cuda.device_count() > 0
-            ), f"Config requests GPU, but CUDA is not available or there are no visilbe devices.\nCUDA available: {torch.cuda.is_available()}\nVisible CUDA devices: {torch.cuda.device_count()}"
-        print(f"Using device {self._device}", file=log.v3)
+            if torch.cuda.is_available() and torch.cuda.device_count() > 0:
+                print(f"Using device {self._device}", file=log.v3)
+            else:
+                reasons = diagnose_gpu.diagnose_no_gpu()
+                raise Exception("No GPU device found, but config requested 'gpu' device.\n" + "\n".join(reasons))
 
         self._amp_dtype = None  # type: Optional[torch.dtype]
 
