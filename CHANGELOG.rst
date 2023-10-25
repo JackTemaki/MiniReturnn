@@ -19,6 +19,10 @@ Current Master 0.2 (+git)
     - Introduce `num_workers_for_gpu` flag which allows for multiprocessing with the PT Dataloader
     - Introduce (automatic) sharding for RETURNN Datasets (For now Generating and MetaDataset) to be able to use multiple dataloader workers
     - Remove unneeded MultiProcDataset
+- Small changes from upstream
+  - Fix in TranslationDataset for Pickling (6eb04d2 -> 2379615)
+  - no init_seq_order in OggZip constructor (11d3346 -> e3f375b)
+
 
 
 Version 0.2
