@@ -69,6 +69,7 @@ class Engine(EngineBase):
             else:
                 reasons = diagnose_gpu.diagnose_no_gpu()
                 raise Exception("No GPU device found, but config requested 'gpu' device.\n" + "\n".join(reasons))
+            diagnose_gpu.print_using_cuda_device_report(self._device, file=log.v2)
 
         self._amp_dtype = None  # type: Optional[torch.dtype]
 
