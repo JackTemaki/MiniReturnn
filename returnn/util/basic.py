@@ -2460,6 +2460,7 @@ def cf(filename):
     shutil.copy(real_filename, temp_file)
     _tempdir_cache[filename] = temp_file
 
+    return temp_file
 
 def binary_search_any(cmp, low, high):
     """
