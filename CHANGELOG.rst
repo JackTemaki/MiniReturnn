@@ -1,6 +1,12 @@
 Changelog
 =========
 
+Current Master (0.3+git)
+------------------------
+
+- Added temporary file cache manager (activated via `use_cache_manager` as for the i6 specific caching)
+
+
 
 Version 0.3
 -----------

@@ -13,7 +13,6 @@ import time
 import torch
 import torch.utils.data.datapipes as dp
 from torch import autocast, Tensor
-from torch.cuda import amp
 from torch.utils.data import DataLoader
 from random import random
 import math
