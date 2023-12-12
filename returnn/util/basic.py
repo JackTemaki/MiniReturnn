@@ -2462,6 +2462,7 @@ def cf(filename):
 
     return temp_file
 
+
 def binary_search_any(cmp, low, high):
     """
     Binary search for a custom compare function.
