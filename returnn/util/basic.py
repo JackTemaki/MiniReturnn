@@ -5,6 +5,8 @@ Various generic utilities, which are shared across different backend engines.
 """
 
 from __future__ import annotations
+
+import shutil
 from typing import Generic, TypeVar
 
 import subprocess
@@ -27,6 +29,7 @@ except ImportError:
     import _thread as thread
 import threading
 
+import filecmp
 import typing
 from returnn.log import log
 import builtins
@@ -2407,8 +2410,13 @@ def is_namedtuple(cls):
     return issubclass(cls, tuple) and cls is not tuple
 
 
+# cache for the i6 cache manager
 _cf_cache = {}
 _cf_msg_printed = False
+
+
+# generic tempdir cache
+_tempdir_cache = {}
 
 
 def cf(filename):
@@ -2422,18 +2430,35 @@ def cf(filename):
     import os
     from subprocess import check_output
 
+    # first try caching via i6 cf
     if filename in _cf_cache:
         return _cf_cache[filename]
     try:
         cached_fn = check_output(["cf", filename]).strip().decode("utf8")
-    except CalledProcessError:
+        assert os.path.exists(cached_fn)
+        _cf_cache[filename] = cached_fn
+        return cached_fn
+    except (CalledProcessError, FileNotFoundError):
         if not _cf_msg_printed:
-            print("Cache manager: Error occurred, using local file")
+            print("i6 cache manager: Error occurred, using internal cache manager", file=log.v3)
             _cf_msg_printed = True
-        return filename
-    assert os.path.exists(cached_fn)
-    _cf_cache[filename] = cached_fn
-    return cached_fn
+
+    # otherwise do generic caching
+    tmp_root = get_temp_dir()
+    if not os.path.exists(tmp_root):
+        os.mkdir(tmp_root)
+
+    real_filename = os.path.realpath(filename)
+    assert real_filename.startswith("/")
+    if filename in _tempdir_cache:
+        existing_file = _tempdir_cache[filename]
+        if filecmp.cmp(real_filename, existing_file) is True:
+            return _tempdir_cache[filename]
+
+    temp_file = os.path.join(tmp_root, real_filename[1:])  # join without root slash
+    os.makedirs(os.path.dirname(temp_file), exist_ok=True)
+    shutil.copy(real_filename, temp_file)
+    _tempdir_cache[filename] = temp_file
 
 
 def binary_search_any(cmp, low, high):
