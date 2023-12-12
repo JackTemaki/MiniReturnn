@@ -6,9 +6,13 @@ Mini-RETURNN is a feature-less derivative of `RETURNN <https://github.com/rwth-i
 No network helper functions are provided, all model logic has to be explicitly defined by the user.
 This is repository is intended to be a quick playground for custom experiments, for everything serious please use `RETURNN <https://github.com/rwth-i6/returnn>`__.
 
-General config-compatibility to RETURNN is kept, but technical details differ, especially regarding the Torch engine class.
-Nevertheless, expect the Mini-RETURNN config to be more strict and more verbose, with less implicit or default assumptions.
+Mini-RETURNN is not intended to be fully compatible to Mainline RETURNN. It is supposed to be a lightweight
+alternative purely focused on PyTorch and academic research.
 
+General config-compatibility to RETURNN is kept, especially with respect to Sisyphus integration.
+
+
+Important differences to mainline RETURNN:
 
 Removed features:
  - Anything related to the Tensorflow backend (also tools and tests)
@@ -38,13 +42,8 @@ Changed behavior:
  - ``weight_decay`` is applied to ALL parameters without exception, some discussion in https://github.com/rwth-i6/returnn/issues/1319 ,
    although the conclusion that the mainline RETURNN behavior can be non-deterministic was not reached there.
  - Always uses the cache-manager if available, even when not running in cluster
- - Dataloader2 from ``torchdata`` was replaced by Dataloader from ``torch.utils.data``, as Dataloader2 has a non-stable API. In addition, num_workers=1 with "spawn" multiprocessing is set. This means that an extra process loads the data, and prefetch is working correctly, resulting in significant speedups.
  - seq_tag, seq_idx and non-Tensor/np.array data support works differently
- - forward init/finish hook interface is different (might be streamlined in a future version)
-
-Additional features:
- - gradient clipping by norm or value
- - print cuda memory information
+ - forward init/finish hook interface is different
 
 Experimental features that might not be needed:
  - ``batching_drop_last`` config parameter to discard the last incomplete batch in an epoch

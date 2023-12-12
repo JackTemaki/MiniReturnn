@@ -2,8 +2,12 @@ Changelog
 =========
 
 
-Current Master 0.2 (+git)
--------------------------
+Version 0.3
+-----------
+
+This is the last version that is kept compatible with mainline RETURNN, roughly at the state of late October 2023.
+
+All following version will deviate.
 
 - Further various code cleanup (`<https://github.com/JackTemaki/MiniReturnn/pull/9>`_):
     - remove commented code in __main__ and make not-implemented messages more verbose
@@ -22,7 +26,7 @@ Current Master 0.2 (+git)
 - Small changes from upstream
   - Fix in TranslationDataset for Pickling (6eb04d2 -> 2379615)
   - no init_seq_order in OggZip constructor (11d3346 -> e3f375b)
-
+  - Allow unexpected keys (809a649 -> 9db8fd2)
 
 
 Version 0.2
