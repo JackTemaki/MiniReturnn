@@ -2457,6 +2457,7 @@ def cf(filename):
 
     temp_file = os.path.join(tmp_root, real_filename[1:])  # join without root slash
     os.makedirs(os.path.dirname(temp_file), exist_ok=True)
+    print(f"internal cache manager, copy:\n{real_filename} to \n{temp_file}", file=log.v3)
     shutil.copy(real_filename, temp_file)
     _tempdir_cache[filename] = temp_file
 
