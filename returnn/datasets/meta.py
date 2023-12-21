@@ -424,10 +424,16 @@ class MetaDataset(CachedDataset2):
 
         for dataset_key, dataset in self.datasets.items():
             assert isinstance(dataset, Dataset)
-            if dataset is seq_order_dataset and not sharding_in_meta:
-                # only skip if we did not do sharding here, otherwise the sequence list
-                # of the control dataset needs to be rebuilt as well
-                continue
+            if dataset is seq_order_dataset:
+                if not sharding_in_meta:
+                    # only skip if we did not do sharding here, otherwise the sequence list
+                    # of the control dataset needs to be rebuilt as well
+                    continue
+                else:
+                    # we can do a faster init using the seq_order directly,
+                    # as the seq_index directly relates to the seq_order_dataset
+                    dataset.init_seq_order(epoch=epoch, seq_order=seq_index)
+                    continue
             dataset.init_seq_order(epoch=epoch, seq_list=self.seq_list_ordered[dataset_key])
         return True
 
