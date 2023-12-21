@@ -115,7 +115,7 @@ class ChunkingIterDataPipe(torch.utils.data.IterDataPipe):
         self._dataset = dataset
         assert "chunk_streams" in chunking_options
         assert len(chunking_options["chunk_streams"]) > 0
-        self._chunking_data_keys = chunking_options["chunk_streams"].keys()
+        self._chunking_data_keys = list(chunking_options["chunk_streams"].keys())
         self._chunk_size = NumbersDict({key: entry["size"] for key, entry in chunking_options["chunk_streams"].items()})
         self._chunk_step = NumbersDict({key: entry["step"] for key, entry in chunking_options["chunk_streams"].items()})
         self._min_chunk_size = NumbersDict(
