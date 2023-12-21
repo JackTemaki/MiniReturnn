@@ -91,46 +91,51 @@ class ChunkingIterDataPipe(torch.utils.data.IterDataPipe):
     So it transforms one sequences into multiple sequences.
     """
 
-    def __init__(self, dataset: torch.utils.data.IterableDataset, chunking, *, min_chunk_size=0):
+    def __init__(self, dataset: torch.utils.data.IterableDataset, chunking_options):
         """
         :param dataset: dataset to apply chunking to
-        :param None|int|(int,int)|dict|(dict,dict) chunking: tuple (chunk_size, chunk_step).
-            If given as single value,
-            value will be used for both.
-            Both chunk_size and chunk_step can be given as a dict data_key -> size/step.
-            This can be used to apply chunking to only a subset of all data keys,
-            or to use different chunking for different
-            data keys.
-            (The number of resulting chunks has to be match though for all given data keys, i.e. sequence lengths
-            have to be considered.)
+        :param chunking_options: dictionary in the following format
+            {
+                chunk_streams: {
+                    "data": {
+                        "size": ...,
+                        "step": ...,
+                        "min_chunk_size": ...,
+                    },
+                    "classes": {
+                        "size": ...,
+                        "step": ...,
+                        "min_chunk_size": ...,
+                    }
+                }
+                "random_chunk_start": True/False  # Start within [0, chunk_step] for first chunk
+            }
         """
         super().__init__()
         self._dataset = dataset
-        # noinspection PyProtectedMember
-        self._chunk_size, self._chunk_step, custom_chunk_func = self._parse_chunking(chunking)
-        self._min_chunk_size = NumbersDict(min_chunk_size)
-        assert not custom_chunk_func, f"Custom chunking function not supported, {chunking!r}"
+        assert "chunk_streams" in chunking_options
+        assert len(chunking_options["chunk_streams"]) > 0
+        self._chunking_data_keys = chunking_options["chunk_streams"].keys()
+        self._chunk_size = NumbersDict({key: entry["size"] for key, entry in chunking_options["chunk_streams"].items()})
+        self._chunk_step = NumbersDict({key: entry["step"] for key, entry in chunking_options["chunk_streams"].items()})
+        self._min_chunk_size = NumbersDict(
+            {key: entry.get("min_chunk_size") for key, entry in chunking_options["chunk_streams"].items()}
+        )
+        self._random_chunk_start = chunking_options.get("random_chunk_start", False)
 
     def __iter__(self) -> Iterable[List[Dict[str, InputType]]]:
         """
         :return: generator providing chunks in the form of a dict data_key -> data chunk
         """
-        chunking_data_keys = list(self._chunk_size.keys())
-
         for data_dict in self._dataset:
-
-            if not chunking_data_keys:
-                chunking_data_keys = list(data_dict.keys())  # use all if not configured separately
-                # TODO: for now explicit removal of seq_tag and seq_idx, we might want
-                # to have only explicit chunking keys instead
-                chunking_data_keys.remove("seq_tag")
-                chunking_data_keys.remove("seq_idx")
-                assert chunking_data_keys, "Dataset produced sequence without any data."
-
             data_chunks = {}
-            num_chunks = None
+            num_chunks = None  # to verify number of chunks
+            if self._random_chunk_start:
+                start = np.random.random()
+            else:
+                start = 0
 
-            for data_key in chunking_data_keys:
+            for data_key in self._chunking_data_keys:
                 chunk_size = self._chunk_size[data_key]
                 chunk_step = self._chunk_step[data_key]
                 min_chunk_size = self._min_chunk_size[data_key]
@@ -138,7 +143,7 @@ class ChunkingIterDataPipe(torch.utils.data.IterDataPipe):
                 data = data_dict[data_key]
                 chunks = [
                     data[start_index : start_index + chunk_size]
-                    for start_index in range(0, len(data), chunk_step)
+                    for start_index in range(int(start * chunk_step), len(data), chunk_step)
                     if len(data[start_index : start_index + chunk_size]) >= min_chunk_size
                 ]
 
@@ -169,40 +174,6 @@ class ChunkingIterDataPipe(torch.utils.data.IterDataPipe):
 
     def __getitem__(self, index):
         raise Exception(f"{self.__class__.__name__}.__getitem__ not supported")
-
-    @staticmethod
-    def _parse_chunking(chunking):
-        """
-        Parse the different chunking formats.
-
-        TODO: This should be cleaned up.
-
-        :param None|int|(int,int)|dict|(dict,dict) chunking: see __init__()
-        :return: chunk_size, chunk_step
-        :rtype: (NumbersDict,NumbersDict,Callable)
-        """
-        if callable(chunking):
-            return None, None, chunking
-        if isinstance(chunking, str):
-            if ":" in chunking:
-                chunking = tuple(map(int, chunking.split(":")))
-            else:
-                chunking = int(chunking)
-        if not isinstance(chunking, (tuple, list)):
-            chunking = (chunking, None)
-        chunk_size, chunk_step = chunking
-        if chunk_size is None:
-            chunk_size = 0
-        assert isinstance(chunk_size, (int, dict, NumbersDict))
-        chunk_size = NumbersDict(chunk_size)
-        assert chunk_size.min_value() > 0, "chunk size must not be negative"
-        if chunk_step in (None, 0):
-            chunk_step = chunk_size
-        assert isinstance(chunk_step, (int, dict, NumbersDict))
-        chunk_step = NumbersDict(chunk_step)
-        assert sorted(chunk_step.keys()) == sorted(chunk_size.keys())
-        assert chunk_step.min_value() > 0, "chunking step must be positive"
-        return chunk_size, chunk_step, None
 
 
 # noinspection PyAbstractClass
