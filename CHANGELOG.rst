@@ -4,8 +4,9 @@ Changelog
 Current Master (0.3+git)
 ------------------------
 
-- Added temporary file cache manager (activated via `use_cache_manager` as for the i6 specific caching)
-
+- Added temporary file cache manager (activated via `use_cache_manager` as for the i6 specific caching, `<https://github.com/JackTemaki/MiniReturnn/pull/13>`_)
+- Small fix for dataset initialization which avoids unnecessary re-init (`<https://github.com/JackTemaki/MiniReturnn/pull/14>`_)
+- Refactor of Chunking mechanism and definition (`<https://github.com/JackTemaki/MiniReturnn/pull/15>`_)
 
 
 Version 0.3
@@ -33,6 +34,7 @@ All following version will deviate.
   - Fix in TranslationDataset for Pickling (6eb04d2 -> 2379615)
   - no init_seq_order in OggZip constructor (11d3346 -> e3f375b)
   - Allow unexpected keys (809a649 -> 9db8fd2)
+- Enable gradient accumulation (`<https://github.com/JackTemaki/MiniReturnn/pull/12>`_)
 
 
 Version 0.2
