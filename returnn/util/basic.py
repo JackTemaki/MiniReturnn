@@ -22,6 +22,7 @@ import math
 import numpy as np
 import re
 import time
+from multiprocessing import Lock
 
 try:
     import thread
@@ -2411,6 +2412,7 @@ def is_namedtuple(cls):
 
 
 # cache for the i6 cache manager
+_cf_lock = Lock()
 _cf_cache = {}
 _cf_msg_printed = False
 
@@ -2426,9 +2428,13 @@ def cf(filename):
     :return: filename
     :rtype: str
     """
-    global _cf_msg_printed
     import os
     from subprocess import check_output
+
+    global _cf_msg_printed
+    global _cf_lock
+
+    _cf_lock.acquire()
 
     # first try caching via i6 cf
     if filename in _cf_cache:
@@ -2460,6 +2466,8 @@ def cf(filename):
     print(f"internal cache manager, copy:\n{real_filename} to \n{temp_file}", file=log.v3)
     shutil.copy(real_filename, temp_file)
     _tempdir_cache[filename] = temp_file
+
+    _cf_lock.release()
 
     return temp_file
 
