@@ -8,13 +8,13 @@ from __future__ import annotations
 import gc
 import torch
 from torch.cuda import amp
-import typing
-from typing import Any, Dict
+from typing import Any, Dict, List, Optional, Union
 
 from returnn.log import log
+from returnn.config import Config
 
 _OptimizerClassesDictInitialized = False
-_OptimizerClassesDict = {}
+_OptimizerClassesDict: Dict[str, type(torch.optim.Optimizer)] = {}
 
 
 def _init_optimizer_classes_dict():
@@ -34,18 +34,16 @@ def _init_optimizer_classes_dict():
         _OptimizerClassesDict[name.lower()] = cls
 
 
-def get_optimizer_class(class_name):
+def get_optimizer_class(class_name: Union[str, type(torch.optim.Optimizer)]) -> type(torch.optim.Optimizer):
     """
-    :param str|()->torch.optim.Optimizer|type[torch.optim.Optimizer] class_name:
-        Optimizer data, e.g. "adam", torch.optim.Adam...
+    :param class_name: Optimizer data, e.g. "adam", torch.optim.Adam...
     :return: Optimizer class
-    :rtype: type[torch.optim.Optimizer]
     """
     _init_optimizer_classes_dict()
     if isinstance(class_name, type):
         assert issubclass(class_name, torch.optim.Optimizer)
     elif callable(class_name):
-        class_name = class_name()
+        raise ValueError("Callable 'class' in 'optimizer' is no longer supported with version 0.4")
     else:
         assert isinstance(class_name, str)
         assert (
@@ -59,13 +57,12 @@ def get_optimizer_class(class_name):
     return class_name
 
 
-def _get_class_init_kwargs(optim_class):
+def _get_class_init_kwargs(optim_class: type[torch.optim.Optimizer]) -> List[str]:
     """
     Obtains the keyword arguments of the class provided as parameter that the user can add to their optimizer.
 
-    :param type[torch.optim.Optimizer] optim_class: Optimizer class.
+    :param optim_class: Optimizer class.
     :return: Keyword arguments of the provided class.
-    :rtype: List[str]
     """
     from returnn.util.basic import collect_class_init_kwargs
 
@@ -81,19 +78,20 @@ class Updater(object):
     Wraps a torch.optim.Optimizer, and extends it by some further functionality.
     """
 
-    def __init__(self, *, config, network, device, initial_learning_rate=1.0):
+    def __init__(self, *, config: Config, network: torch.nn.Module, device: str, initial_learning_rate: float = 1.0):
         """
-        :param returnn.config.Config config: config defining the training conditions.
-        :param torch.nn.Module network: PyTorch Module defining the network.
-        :param float initial_learning_rate:
+        :param config: config defining the training conditions.
+        :param network: PyTorch Module defining the network.
+        :param device: The currently used device
+        :param initial_learning_rate:
         """
         self.config = config
         self.learning_rate = initial_learning_rate
         self.network = network
         self._device = device
-        self.optimizer = None  # type: typing.Optional[torch.optim.Optimizer]
+        self.optimizer: Optional[torch.optim.Optimizer] = None
 
-        self._grad_scaler = None  # type: amp.GradScaler
+        self._grad_scaler: Optional[amp.GradScaler] = None
 
         self._grad_clip = self.config.float("gradient_clip", None)
         self._grad_clip_norm = self.config.float("gradient_clip_norm", None)
@@ -106,20 +104,14 @@ class Updater(object):
         """
         self._grad_scaler = amp.GradScaler()
 
-    def set_learning_rate(self, value):
+    def set_learning_rate(self, value: float):
         """
         Updates the learning rate of the optimizer at each (sub)epoch.
 
-        :param float value: New learning rate.
+        :param value: New learning rate.
         """
         for param_group in self.optimizer.param_groups:
             param_group["lr"] = value
-
-    def get_current_step_learning_rate(self):
-        """
-        Obtains an updated learning rate for the current training step inside a (sub)epoch.
-        """
-        pass
 
     def create_optimizer(self):
         """
@@ -135,7 +127,6 @@ class Updater(object):
         Loads a torch.optim.Optimizer from disk and stores it in self.optimizer.
 
         :param filename: File from which to load the optimizer state.
-        :param device: target device to load the optimizer to
         """
         print("Load optimizer %s" % filename, file=log.v4)
         optimizer_state = torch.load(filename, map_location=self._device)
@@ -144,19 +135,18 @@ class Updater(object):
         del optimizer_state
         gc.collect()
 
-    def save_optimizer(self, filename):
+    def save_optimizer(self, filename: str):
         """
         Saves the state of self.optimizer to a file.
 
-        :param str filename: File in which to save the optimizer state.
+        :param filename: File in which to save the optimizer state.
         """
         print("Save optimizer under %s" % filename, file=log.v4)
         torch.save(self.optimizer.state_dict(), filename)
 
-    def get_optimizer(self):
+    def get_optimizer(self) -> torch.optim.Optimizer:
         """
-        :return: Wrapped optimizer object.
-        :rtype: torch.optim.Optimizer
+        unused within RETURNN, can be used via the config
         """
         return self.optimizer
 
@@ -199,15 +189,13 @@ class Updater(object):
             # remove gradients at the end of gradient accumulation
             self.optimizer.zero_grad()
 
-    def _create_optimizer(self, optimizer_opts):
+    def _create_optimizer(self, optimizer_opts: Union[Dict[str, Any], torch.optim.Optimizer]) -> torch.optim.Optimizer:
         """
         Returns a valid optimizer considering the dictionary given by the user in the config.
 
-        :param dict[str]|str optimizer_opts: Optimizer configuration specified by the user.
+        :param optimizer_opts: Optimizer configuration specified by the user.
             If it's a dict, it must contain "class" with the optimizer name or callable.
-            If it's a str, it must be the optimizer name.
         :return: A valid optimizer.
-        :rtype: torch.optim.Optimizer
         """
         lr = self.learning_rate
 
@@ -215,10 +203,10 @@ class Updater(object):
         if isinstance(optimizer_opts, torch.optim.Optimizer):
             return optimizer_opts
         elif callable(optimizer_opts):
-            optimizer_opts: Dict[str, Any] = {"class": optimizer_opts}
+            raise ValueError("Callable 'optimizer' is no longer supported with version 0.4")
         else:
             if not isinstance(optimizer_opts, dict):
-                raise ValueError("'optimizer' must of type dict, callable or torch.optim.Optimizer instance.")
+                raise ValueError("'optimizer' must of type dict or torch.optim.Optimizer instance.")
             if "class" not in optimizer_opts:
                 raise ValueError("'class' field of 'optimizer' dict was not set (use e.g. 'SGD', 'Adam', ...)")
 
@@ -245,48 +233,16 @@ class Updater(object):
 
         return optimizer
 
-    def _create_default_optimizer(self):
-        """
-        :return: SGD optimizer.
-        :rtype: torch.optim.SGD
-        """
-        print("Create SGD optimizer (default).", file=log.v2)
-        optimizer = torch.optim.SGD(self.network.parameters(), lr=self.learning_rate)
-
-        return optimizer
-
     # noinspection PyUnusedLocal
-    def _get_optimizer_param_groups(self, optim_class, optimizer_opts):
+    def _get_optimizer_param_groups(
+        self, optim_class: type(torch.optim.Optimizer), optimizer_opts: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """
-        TODO: as the original code to exclude some layers from the weight_decay was incorrect,
-              the current behavior is to not exclude any parameter at all
+        TODO: the current behavior is to not exclude any parameter at all, unclear if this is desired
 
-        The following is the old docstring. It defines the desired behaviour, but not the actual one,
-        which is doing nothing.
-        ----------------------------------------------------------------------------------------------------
-        The weight_decay parameter from AdamW affects the weights of layers such as LayerNorm and Embedding.
-        This function creates a blacklist of network modules and splits the optimizer groups in two:
-        those who will receive weight decay, and those who won't receive it.
-        The weight_decay parameter of the rest of the optimizers is L2 regularization.
-
-        For further reading, see https://github.com/karpathy/minGPT/pull/24#issuecomment-679316025 and
-        https://discuss.pytorch.org/t/weight-decay-in-the-optimizers-is-a-bad-idea-especially-with-batchnorm/16994.
-
-        This code is based on https://github.com/karpathy/minGPT (MIT license):
-        https://github.com/karpathy/minGPT/blob/3ed14b2cec0dfdad3f4b2831f2b4a86d11aef150/mingpt/model.py#L136.
-
-        :param type[torch.optim.Optimizer] optim_class: Optimizer class.
-        :param dict[str] optimizer_opts: Optimizer configuration specified by the user.
+        :param optim_class: Optimizer class, currently unused
+        :param optimizer_opts: Optimizer configuration specified by the user, currently unused
         :return: List of configurations for the different sets of parameters.
-        :rtype: List[Dict[str]]
         """
         network_params = self.network.parameters()
-
-        # By default insert the weight_decay constraints in the optimizer, as this is default PyTorch behavior.
-        # If the user doesn't accept this, throw an error message.
-        assert self.config.bool("decouple_constraints", True), (
-            "L2/weight_decay constraints are decoupled in PyTorch, but "
-            "decouple_constraints=False was explicitly specified in the config."
-        )
-
         return [{"params": network_params}]

@@ -7,6 +7,7 @@ Current Master (0.3+git)
 - Added temporary file cache manager (activated via `use_cache_manager` as for the i6 specific caching, `<https://github.com/JackTemaki/MiniReturnn/pull/13>`_)
 - Small fix for dataset initialization which avoids unnecessary re-init (`<https://github.com/JackTemaki/MiniReturnn/pull/14>`_)
 - Refactor of Chunking mechanism and definition (`<https://github.com/JackTemaki/MiniReturnn/pull/15>`_)
+- Refactor updater.py (docstrings, deprecate using callables, typing)
 
 
 Version 0.3
