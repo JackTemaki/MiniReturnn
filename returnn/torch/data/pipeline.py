@@ -50,6 +50,8 @@ def create_tensor(value: InputType) -> OutputType:
         return value  # keep as-is
     if value.dtype == np.uint32:
         value = np.asarray(value, dtype=np.int64)
+    elif value.dtype == np.uint16:
+        value = np.asarray(value, dtype=np.int32)
     return torch.tensor(value)
 
 
