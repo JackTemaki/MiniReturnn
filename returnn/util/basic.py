@@ -22,6 +22,7 @@ import math
 import numpy as np
 import re
 import time
+from multiprocessing import Lock
 
 try:
     import thread
@@ -2411,6 +2412,7 @@ def is_namedtuple(cls):
 
 
 # cache for the i6 cache manager
+_cf_lock = Lock()
 _cf_cache = {}
 _cf_msg_printed = False
 
@@ -2426,17 +2428,23 @@ def cf(filename):
     :return: filename
     :rtype: str
     """
-    global _cf_msg_printed
     import os
     from subprocess import check_output
 
+    global _cf_msg_printed
+    global _cf_lock
+
+    _cf_lock.acquire()
+
     # first try caching via i6 cf
     if filename in _cf_cache:
+        _cf_lock.release()
         return _cf_cache[filename]
     try:
         cached_fn = check_output(["cf", filename]).strip().decode("utf8")
         assert os.path.exists(cached_fn)
         _cf_cache[filename] = cached_fn
+        _cf_lock.release()
         return cached_fn
     except (CalledProcessError, FileNotFoundError):
         if not _cf_msg_printed:
@@ -2453,14 +2461,16 @@ def cf(filename):
     if filename in _tempdir_cache:
         existing_file = _tempdir_cache[filename]
         if filecmp.cmp(real_filename, existing_file) is True:
+            _cf_lock.release()
             return _tempdir_cache[filename]
 
     temp_file = os.path.join(tmp_root, real_filename[1:])  # join without root slash
     os.makedirs(os.path.dirname(temp_file), exist_ok=True)
-    print(f"internal cache manager, copy:\n{real_filename} to \n{temp_file}", file=log.v3)
+    print(f"internal cache manager, copy:\n{real_filename} to \n{temp_file}", file=log.v3, end="")
     shutil.copy(real_filename, temp_file)
     _tempdir_cache[filename] = temp_file
 
+    _cf_lock.release()
     return temp_file
 
 

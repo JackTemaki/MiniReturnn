@@ -8,6 +8,7 @@ Current Master (0.3+git)
 - Small fix for dataset initialization which avoids unnecessary re-init (`<https://github.com/JackTemaki/MiniReturnn/pull/14>`_)
 - Refactor of Chunking mechanism and definition (`<https://github.com/JackTemaki/MiniReturnn/pull/15>`_)
 - Refactor updater.py (docstrings, deprecate using callables, typing)
+- Add thread locking for cache manager (`https://github.com/JackTemaki/MiniReturnn/pull/16_)
 
 
 Version 0.3
