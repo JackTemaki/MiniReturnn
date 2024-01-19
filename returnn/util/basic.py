@@ -2466,9 +2466,10 @@ def cf(filename):
 
     real_filename = os.path.realpath(filename)
     temp_file = os.path.join(tmp_root, real_filename[1:])  # join without root slash
-    if filecmp.cmp(real_filename, temp_file) is True:
-        _cf_lock.release()
-        return temp_file
+    if os.path.exists(temp_file):
+        if filecmp.cmp(real_filename, temp_file) is True:
+            _cf_lock.release()
+            return temp_file
 
     print(f"internal cache manager, copy:\n{real_filename} to \n{temp_file}", file=log.v3)
     os.makedirs(os.path.dirname(temp_file), exist_ok=True)
