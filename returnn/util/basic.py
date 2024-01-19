@@ -2461,14 +2461,17 @@ def cf(filename):
     real_filename = os.path.realpath(filename)
     assert real_filename.startswith("/")
     if filename in _tempdir_cache:
-        existing_file = _tempdir_cache[filename]
-        if filecmp.cmp(real_filename, existing_file) is True:
-            _cf_lock.release()
-            return _tempdir_cache[filename]
+        _cf_lock.release()
+        return _tempdir_cache[filename]
 
+    real_filename = os.path.realpath(filename)
     temp_file = os.path.join(tmp_root, real_filename[1:])  # join without root slash
+    if filecmp.cmp(real_filename, temp_file) is True:
+        _cf_lock.release()
+        return temp_file
+
+    print(f"internal cache manager, copy:\n{real_filename} to \n{temp_file}", file=log.v3)
     os.makedirs(os.path.dirname(temp_file), exist_ok=True)
-    print(f"internal cache manager, copy:\n{real_filename} to \n{temp_file}", file=log.v3, end="")
     shutil.copy(real_filename, temp_file)
     _tempdir_cache[filename] = temp_file
 
