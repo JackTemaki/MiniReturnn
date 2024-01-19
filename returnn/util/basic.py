@@ -2433,6 +2433,8 @@ def cf(filename):
 
     global _cf_msg_printed
     global _cf_lock
+    global _cf_cache
+    global _tempdir_cache
 
     _cf_lock.acquire()
 
