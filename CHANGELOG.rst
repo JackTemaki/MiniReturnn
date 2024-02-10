@@ -9,8 +9,7 @@ Current Master (0.3+git)
 - Refactor of Chunking mechanism and definition (`<https://github.com/JackTemaki/MiniReturnn/pull/15>`_)
 - Refactor updater.py (docstrings, deprecate using callables, typing)
 - Add thread locking for cache manager (`https://github.com/JackTemaki/MiniReturnn/pull/16_`)
-- Merge torch average checkpoint script from upstream (b346ef0 -> 120d28c)
-
+- Merge torch average checkpoint script from upstream (b346ef0 -> 120d28c, including fix e6f3f5d->d12a59f)
 
 Version 0.3
 -----------
