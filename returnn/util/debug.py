@@ -207,25 +207,6 @@ def install_signal_handler_if_default(signum, exceptions_are_fatal=False):
     return False
 
 
-def install_native_signal_handler():
-    """
-    Installs some own custom C signal handler.
-    """
-    try:
-        import ctypes
-
-        # TODO: Move C code here, automatically compile it on-the-fly or so.
-        # C code: https://github.com/albertz/playground/blob/master/signal_handler.c
-        # Maybe not needed because on Linux there is libSegFault.so anyway (installLibSigSegfault()).
-        lib = ctypes.CDLL("/u/zeyer/code/playground/signal_handler.so")
-        lib.install_signal_handler.return_type = None
-        lib.install_signal_handler()
-        print("Installed signal_handler.so.")
-
-    except Exception as exc:
-        print("installNativeSignalHandler exception: %s" % exc)
-
-
 def install_lib_sig_segfault():
     """
     Installs libSegFault (common on Unix/Linux).
@@ -259,9 +240,6 @@ def init_faulthandler(sigusr1_chain=False):
 
     # Enable libSigSegfault first, so that we can have both,
     # because faulthandler will also call the original sig handler.
-    if os.environ.get("DEBUG_SIGNAL_HANDLER") and to_bool(os.environ.get("DEBUG_SIGNAL_HANDLER")):
-        install_lib_sig_segfault()
-        install_native_signal_handler()
     if sys.platform != "win32":
         # In case that sigusr1_chain, we expect that there is already some handler
         # for SIGUSR1, and then this will not overwrite this handler.
@@ -397,30 +375,6 @@ def init_ipython_kernel():
     thread_ = threading.Thread(target=ipython_thread, name="IPython kernel")
     thread_.daemon = True
     thread_.start()
-
-
-def init_cuda_not_in_main_proc_check():
-    """
-    Installs some hook to Theano which checks that CUDA is only used in the main proc.
-    """
-    # noinspection PyUnresolvedReferences,PyPackageRequirements
-    import theano.sandbox.cuda as cuda
-
-    if cuda.use.device_number is not None:
-        print("CUDA already initialized in proc %i" % os.getpid())
-        return
-    use_original = cuda.use
-
-    def use_wrapped(device, **kwargs):
-        """
-        :param device:
-        :param kwargs:
-        """
-        print("CUDA.use %s in proc %i" % (device, os.getpid()))
-        use_original(device=device, **kwargs)
-
-    cuda.use = use_wrapped
-    cuda.use.device_number = None
 
 
 def debug_shell(user_ns=None, user_global_ns=None, exit_afterwards=True):

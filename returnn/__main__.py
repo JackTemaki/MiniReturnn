@@ -16,8 +16,6 @@ import time
 import typing
 from returnn.log import log
 from returnn.config import Config
-from returnn.datasets import Dataset, init_dataset
-from returnn.datasets.hdf import HDFDataset
 from returnn.util import debug as debug_util
 from returnn.util import basic as util
 from returnn.engine.base import EngineBase
