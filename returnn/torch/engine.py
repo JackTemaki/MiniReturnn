@@ -212,7 +212,7 @@ class Engine(EngineBase):
             step_idx += 1
             self._train_step += 1
 
-        print("Trained %i steps, took %.3fs" % (step_idx, time.time() - epoch_start_time))
+        print("Trained %i steps, took %.3fs" % (step_idx, time.time() - epoch_start_time), file=log.v2)
 
         accumulated_losses_dict = accumulated_losses_dict / accumulated_inv_norm_dict
         self.learning_rate_control.set_epoch_error(self.epoch, dict(accumulated_losses_dict))
