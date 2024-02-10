@@ -10,6 +10,7 @@ Current Master (0.3+git)
 - Refactor updater.py (docstrings, deprecate using callables, typing)
 - Add thread locking for cache manager (`https://github.com/JackTemaki/MiniReturnn/pull/16_`)
 - Merge torch average checkpoint script from upstream (b346ef0 -> 120d28c, including fix e6f3f5d->d12a59f)
+- HDFDataset sparse fix from upstream (`<https://github.com/rwth-i6/returnn/pull/1503>`_)
 
 Version 0.3
 -----------
