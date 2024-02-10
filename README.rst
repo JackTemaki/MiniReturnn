@@ -7,10 +7,30 @@ No network helper functions are provided, all model logic has to be explicitly d
 This is repository is intended to be a quick playground for custom experiments, for everything serious please use `RETURNN <https://github.com/rwth-i6/returnn>`__.
 
 Mini-RETURNN is not intended to be fully compatible to Mainline RETURNN. It is supposed to be a lightweight
-alternative purely focused on PyTorch and academic research.
+alternative purely focused on PyTorch and academic research. For an overview on changes see the last section below.
 
 General config-compatibility to RETURNN is kept, especially with respect to Sisyphus integration.
 
+
+Installation
+------------
+
+PyTorch >= 1.13 is recommended, but might not be strictly necessary.
+You can use the `requirements.txt` file to install all strictly necessary packages.
+Additional packages might be required for certain features, which can be installed using `requirements-optional.txt`.
+
+Usage
+-----
+
+Mini-RETURNN is intended to be used in conjunction with the i6-style Sisyphus experiment pipelines.
+A current example setup can be found `here <https://github.com/rwth-i6/i6_experiments/tree/main/users/rossenbach/experiments/rescale/tedlium2_standalone_2023>`_, but a proper example setup will be added in the future.
+
+In general, the ``rnn.py`` file is intended to be the entry point in using RETURNN, used in combination with a config file:
+``python3 rnn.py <config_file>``
+
+
+Difference to Mainline RETURNN
+------------------------------
 
 Important differences to mainline RETURNN:
 
@@ -28,6 +48,7 @@ Removed features:
 
 Not yet added features:
  - Multi-GPU training
+ - Many small changes around the PyTorch Engine and other parts
 
 
 Changed behavior:
@@ -47,13 +68,4 @@ Changed behavior:
 
 Experimental features that might not be needed:
  - ``batching_drop_last`` config parameter to discard the last incomplete batch in an epoch
-
-
-
-Installation
-------------
-
-PyTorch >= 1.13 is recommended, but might not be strictly necessary.
-You can use the `requirements.txt` file to install all strictly necessary packages.
-Additional packages might be required for certain features, which can be installed using ``requirements-optional.txt`.
 

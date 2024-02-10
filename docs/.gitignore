@@ -1,7 +1,0 @@
-/_build
-
-# auto generated at the moment
-/api/*.rst
-/layer_reference/units.rst
-optimizer.rst
-/returnn

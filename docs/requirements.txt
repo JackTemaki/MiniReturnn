@@ -1,7 +1,0 @@
-numpy
-scipy
-h5py
-torch==2.0
-numpydoc
-better_exchook
-sphinx_rtd_theme
