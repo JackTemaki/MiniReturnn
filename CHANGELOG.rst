@@ -14,6 +14,7 @@ Current Master (0.3+git)
 - uint16 type fix from upstream (`<https://github.com/rwth-i6/returnn/pull/1488>`_)
 - Remove more unused code, e.g. in logging, debug, removed unused Gammatone code
 - Deleted old docs, added simple configuration.rst file
+- Fix OggZipDataset seq list speed issue from upstream (`<https://github.com/rwth-i6/returnn/pull/1507>`_)
 
 Version 0.3
 -----------
