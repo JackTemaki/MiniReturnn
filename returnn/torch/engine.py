@@ -448,8 +448,11 @@ class Engine(EngineBase):
         checkpoint_state = None
         if filename is not None:
             print("Load model %s" % (filename,), file=log.v4)
+            load_filename = filename + self.get_file_postfix()
+            if not os.path.exists(load_filename) and os.path.exists(filename):
+                load_filename = filename
             checkpoint_state = torch.load(
-                filename + self.get_file_postfix(),
+                load_filename,
                 map_location=self._device,
             )
 

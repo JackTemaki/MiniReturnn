@@ -135,9 +135,10 @@ class EngineBase(object):
         """
         load_model_epoch_filename = util.get_checkpoint_filepattern(config.value("load", ""))
         if load_model_epoch_filename:
-            assert os.path.exists(
-                load_model_epoch_filename + cls.get_file_postfix(),
-            ), "load option %r, file %r does not exist" % (
+
+            assert os.path.exists(load_model_epoch_filename + cls.get_file_postfix()) or os.path.exists(
+                load_model_epoch_filename
+            ), "config option load=%r, file %r does not exist" % (
                 config.value("load", ""),
                 load_model_epoch_filename + cls.get_file_postfix(),
             )
