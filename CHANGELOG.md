@@ -5,7 +5,7 @@
 
 
 - Added temporary file cache manager (activated via `use_cache_manager` as for the i6 specific caching, https://github.com/JackTemaki/MiniReturnn/pull/13
-- Small fix for dataset initialization which avoids unnecessary re-init https://github.com/JackTemaki/MiniReturnn/pull/14>
+- Small fix for dataset initialization which avoids unnecessary re-init https://github.com/JackTemaki/MiniReturnn/pull/14
 - Refactor of Chunking mechanism and definition https://github.com/JackTemaki/MiniReturnn/pull/15
 - Refactor updater.py (docstrings, deprecate using callables, typing)
 - Add thread locking for cache manager https://github.com/JackTemaki/MiniReturnn/pull/16
@@ -14,7 +14,7 @@
 - uint16 type fix from upstream https://github.com/rwth-i6/returnn/pull/1488
 - Remove more unused code, e.g. in logging, debug, removed unused Gammatone code
 - Deleted old docs, added simple configuration.rst file
-- Fix OggZipDataset seq list speed issue from upstream https://github.com/rwth-i6/returnn/pull/1507>
+- Fix OggZipDataset seq list speed issue from upstream https://github.com/rwth-i6/returnn/pull/1507
 - bliss-to-ogg-zip.py allow bliss without orth
 - SPM -1 index and line based vocab from upstream
 - Fix average checkpoints script from upstream https://github.com/rwth-i6/returnn/pull/1509
