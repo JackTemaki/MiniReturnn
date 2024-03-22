@@ -16,6 +16,7 @@ Current Master (0.3+git)
 - Deleted old docs, added simple configuration.rst file
 - Fix OggZipDataset seq list speed issue from upstream (`<https://github.com/rwth-i6/returnn/pull/1507>`_)
 - bliss-to-ogg-zip.py allow bliss without orth
+- SPM -1 index and line based vocab from upstream
 
 Version 0.3
 -----------
