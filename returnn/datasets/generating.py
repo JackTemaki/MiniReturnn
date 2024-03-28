@@ -6,15 +6,10 @@ from __future__ import annotations
 
 from typing import Optional, Sequence
 import numpy
-import sys
 import typing
 
-from returnn.util.basic import class_idx_seq_to_1_of_k, CollectionReadCheckCovered
-from returnn.log import log
+from returnn.util.basic import class_idx_seq_to_1_of_k
 
-from .util.feature_extraction import ExtractAudioFeatures
-from .util.vocabulary import *
-from .audio import OggZipDataset  # noqa # for API compatibility
 from .basic import Dataset, DatasetSeq, convert_data_dims
 from .cached2 import CachedDataset2
 

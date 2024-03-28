@@ -3,8 +3,11 @@
 
 ## Current Master (0.4+git)
 
-- Remove everything related to RASR/Sprint interfacing
-- Remove task-system that is no longer needed
+- Remove "Sprint" related code https://github.com/JackTemaki/MiniReturnn/pull/17
+  - Remove everything related to RASR/Sprint interfacing
+  - Remove task-system that is no longer needed
+  - Remove Sprint Datasets
+- Cleanup dataset imports and fix missing stream_hdf module loading
 
 
 ## Version 0.4
