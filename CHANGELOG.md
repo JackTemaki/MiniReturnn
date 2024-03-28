@@ -1,6 +1,11 @@
 # Changelog
 
 
+## Current Master (0.4+git)
+
+- Remove everything related to RASR/Sprint interfacing
+
+
 ## Version 0.4
 
 - Added temporary file cache manager (activated via `use_cache_manager` as for the i6 specific caching, https://github.com/JackTemaki/MiniReturnn/pull/13

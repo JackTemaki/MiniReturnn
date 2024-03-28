@@ -101,7 +101,6 @@ assert os.path.exists("%s/rnn.py" % _root_dir)
 # I removed already all files which really should not have warnings (mostly the TF backend + shared files).
 ignore_count_for_files = {
     "returnn/util/fsa.py",
-    "returnn/util/task_system.py",
     "returnn/datasets/bundle_file.py",
     "returnn/datasets/cached.py",
     "returnn/datasets/raw_wav.py",

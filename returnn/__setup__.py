@@ -8,7 +8,7 @@ import os
 import sys
 
 
-VERSION = "0.4"
+VERSION = "0.4+git"
 
 _my_dir = os.path.dirname(os.path.abspath(__file__))
 # Use realpath to resolve any symlinks. We want the real root-dir, to be able to check the Git revision.
