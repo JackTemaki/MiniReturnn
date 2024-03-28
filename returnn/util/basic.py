@@ -343,32 +343,6 @@ def hdf5_strings(handle, name, data):
         dset[...] = data
 
 
-def model_epoch_from_filename(filename):
-    """
-    :param str filename:
-    :return: epoch number
-    :rtype: int
-    """
-    # We could check via:
-    # tf.contrib.framework.python.framework.checkpoint_utils.load_variable()
-    # once we save that in the model.
-    # See TFNetwork.Network._create_saver().
-    # We don't have it in the model, though.
-    # For now, just parse it from filename.
-    # If TF, and symlink, resolve until no symlink anymore (e.g. if we symlinked the best epoch).
-    while True:
-        tf_meta_fn = "%s.meta" % filename
-        if os.path.exists(tf_meta_fn) and os.path.islink(tf_meta_fn):
-            tf_meta_fn_ = os.readlink(tf_meta_fn)
-            assert tf_meta_fn_.endswith(".meta"), "strange? %s, %s" % (filename, tf_meta_fn)
-            filename = tf_meta_fn_[: -len(".meta")]
-        else:
-            break
-    m = re.match(".*\\.([0-9]+)", filename)
-    assert m, "no match for %r" % filename
-    return int(m.groups()[0])
-
-
 def deep_update_dict_values(d, key, new_value):
     """
     Visits all items in `d`.
@@ -1053,22 +1027,6 @@ def random_orthogonal(shape, gain=1.0, seed=None):
     q = u if u.shape == flat_shape else v
     q = q.reshape(shape)
     return gain * q[: shape[0], : shape[1]]
-
-
-# noinspection PyUnusedLocal
-def inplace_increment(x, idx, y):
-    """
-    This basically does `x[idx] += y`.
-    The difference to the Numpy version is that in case some index is there multiple
-    times, it will only be incremented once (and it is not specified which one).
-    See also theano.tensor.subtensor.AdvancedIncSubtensor documentation.
-
-    :param numpy.ndarray x:
-    :param numpy.ndarray idx:
-    :param numpy.ndarray y:
-    :rtype: numpy.ndarray
-    """
-    raise NotImplementedError("This feature was removed with dropped Theano support")
 
 
 def parse_orthography_into_symbols(
