@@ -870,7 +870,7 @@ def get_dataset_class(name: Union[str, Type[Dataset]]) -> Optional[Type[Dataset]
 
     # Only those modules which make sense to be loaded by the user,
     # because this function is only used for such cases.
-    mod_names = ["hdf", "sprint", "generating", "numpy_dump", "meta", "lm", "map"]
+    mod_names = ["hdf", "generating", "numpy_dump", "meta", "lm", "map"]
     for mod_name in mod_names:
         mod = import_module("returnn.datasets.%s" % mod_name)
         for name_, clazz in vars(mod).items():
