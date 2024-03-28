@@ -1,8 +1,7 @@
 # Changelog
 
 
-## Current Master (0.3+git)
-
+## Version 0.4
 
 - Added temporary file cache manager (activated via `use_cache_manager` as for the i6 specific caching, https://github.com/JackTemaki/MiniReturnn/pull/13
 - Small fix for dataset initialization which avoids unnecessary re-init https://github.com/JackTemaki/MiniReturnn/pull/14
@@ -19,8 +18,8 @@
 - SPM -1 index and line based vocab from upstream
 - Fix average checkpoints script from upstream https://github.com/rwth-i6/returnn/pull/1509
 
-## Version 0.3
 
+## Version 0.3
 
 This is the last version that is kept compatible with mainline RETURNN, roughly at the state of late October 2023.
 
