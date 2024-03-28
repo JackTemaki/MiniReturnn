@@ -4,6 +4,7 @@
 ## Current Master (0.4+git)
 
 - Remove everything related to RASR/Sprint interfacing
+- Remove task-system that is no longer needed
 
 
 ## Version 0.4

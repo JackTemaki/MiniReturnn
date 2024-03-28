@@ -92,12 +92,6 @@ def init_config(config_filename=None, command_line_options=(), default_config=No
     if command_line_options:
         config.parse_cmd_args(command_line_options)
 
-    # I really don't know where to put this otherwise:
-    if config.bool("EnableAutoNumpySharedMemPickling", False):
-        import returnn.util.task_system
-
-        returnn.util.task_system.SharedMemNumpyConfig["enabled"] = True
-
 
 def init_log():
     """
