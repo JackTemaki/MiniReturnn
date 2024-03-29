@@ -8,7 +8,7 @@
   - Remove task-system that is no longer needed
   - Remove Sprint Datasets
 - Cleanup dataset imports and fix missing stream_hdf module loading
-
+- Fix orthograhpy parsing helper from upstream https://github.com/rwth-i6/returnn/pull/1510
 
 ## Version 0.4
 
