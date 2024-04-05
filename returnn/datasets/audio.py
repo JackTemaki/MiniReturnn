@@ -48,6 +48,7 @@ class OggZipDataset(CachedDataset2):
         segment_file=None,
         zip_audio_files_have_name_as_prefix=True,
         fixed_random_subset=None,
+        fixed_random_subset_seed=42,
         epoch_wise_filter=None,
         **kwargs,
     ):
@@ -66,7 +67,8 @@ class OggZipDataset(CachedDataset2):
           Value in [0,1] to specify the fraction, or integer >=1 which specifies number of seqs.
           If given, will use this random subset. This will be applied initially at loading time,
           i.e. not dependent on the epoch.
-          It will use an internally hardcoded fixed random seed, i.e. it's deterministic.
+          It uses the fixed fixed_random_subset_seed as seed, i.e. it's deterministic.
+        :param int fixed_random_subset_seed: Seed for drawing the fixed random subset, default 42
         :param dict|None epoch_wise_filter: see init_seq_order
         """
         import os
@@ -151,9 +153,8 @@ class OggZipDataset(CachedDataset2):
         else:
             self.num_outputs["data"] = [0, 2]
         self._data = self._collect_data()
-        self._fixed_random_subset = fixed_random_subset
         if fixed_random_subset:
-            self._filter_fixed_random_subset(fixed_random_subset)
+            self._filter_fixed_random_subset(fixed_random_subset, fixed_random_subset_seed)
         if epoch_wise_filter is None:
             self.epoch_wise_filter = None  # type: Optional[EpochWiseFilter]
         elif isinstance(epoch_wise_filter, dict):
@@ -244,14 +245,15 @@ class OggZipDataset(CachedDataset2):
             segment_file_handle = open(segment_file)
             self.segments = set(segment_file_handle.read().splitlines())
 
-    def _filter_fixed_random_subset(self, fixed_random_subset):
+    def _filter_fixed_random_subset(self, fixed_random_subset, fixed_random_subset_seed):
         """
         :param int fixed_random_subset:
+        :param int fixed_random_subset_seed:
         """
         if 0 < fixed_random_subset < 1:
             fixed_random_subset = int(len(self._data) * fixed_random_subset)
         assert isinstance(fixed_random_subset, int) and fixed_random_subset > 0
-        rnd = numpy.random.RandomState(42)
+        rnd = numpy.random.RandomState(fixed_random_subset_seed)
         seqs = self._data
         rnd.shuffle(seqs)
         seqs = seqs[:fixed_random_subset]
