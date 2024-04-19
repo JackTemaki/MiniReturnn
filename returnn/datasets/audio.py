@@ -154,6 +154,8 @@ class OggZipDataset(CachedDataset2):
             self.num_outputs["data"] = [0, 2]
         self._data = self._collect_data()
         if fixed_random_subset:
+            self._fixed_random_subset = fixed_random_subset
+            self._fixed_random_subset_seed = fixed_random_subset_seed
             self._filter_fixed_random_subset(fixed_random_subset, fixed_random_subset_seed)
         if epoch_wise_filter is None:
             self.epoch_wise_filter = None  # type: Optional[EpochWiseFilter]
