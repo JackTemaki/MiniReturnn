@@ -224,7 +224,8 @@ class Engine(EngineBase):
             self._save_optimizer()
 
         self.eval_model()
-        self.cleanup_old_models(ask_for_confirmation=False)
+        if self.config.bool_or_other("cleanup_old_models", None):
+            self.cleanup_old_models(ask_for_confirmation=False)
 
     def eval_model(self, *, skip_already_evaluated: bool = False):
         """

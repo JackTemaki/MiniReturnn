@@ -10,6 +10,7 @@
 - Cleanup dataset imports and fix missing stream_hdf module loading
 - Fix orthograhpy parsing helper from upstream https://github.com/rwth-i6/returnn/pull/1510
 - Add OggZip fixed_random_subset_seed from upstream https://github.com/rwth-i6/returnn/pull/1512
+- Fix that cleanup_old_models is always active
 
 ## Version 0.4
 
