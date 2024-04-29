@@ -11,6 +11,7 @@
 - Fix orthograhpy parsing helper from upstream https://github.com/rwth-i6/returnn/pull/1510
 - Add OggZip fixed_random_subset_seed from upstream https://github.com/rwth-i6/returnn/pull/1512
 - Fix that cleanup_old_models is always active
+- Fix for pickle error due to missing args stored in OggZipDataset caused by #1512
 
 ## Version 0.4
 
