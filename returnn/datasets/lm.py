@@ -302,6 +302,12 @@ class LmDataset(CachedDataset2):
         self.num_unknown = 0
         if self.seq_gen:
             self.seq_gen.random_seed(epoch)
+
+        if self.error_on_invalid_seq is True:
+            # if we would error on invalid sequences, we are not skipping anything, thus we know
+            # how many sequences we have and can use that
+            self._num_seqs = len(self.seq_order)
+
         return True
 
     def _reduce_log_skipped_seqs(self):
