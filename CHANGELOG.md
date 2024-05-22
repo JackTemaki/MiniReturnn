@@ -12,6 +12,7 @@
 - Add OggZip fixed_random_subset_seed from upstream https://github.com/rwth-i6/returnn/pull/1512
 - Fix that cleanup_old_models is always active
 - Fix for pickle error due to missing args stored in OggZipDataset caused by #1512
+- Add GPU prints from upstream (various commits, mainly diagnose_gpu.py)
 
 ## Version 0.4
 
