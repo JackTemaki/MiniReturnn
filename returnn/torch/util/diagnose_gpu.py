@@ -8,7 +8,7 @@ import os
 import sys
 import subprocess
 import torch
-import better_exchook
+from better_exchook import better_exchook
 
 
 def diagnose_no_gpu() -> List[str]:
