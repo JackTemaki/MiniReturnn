@@ -61,15 +61,14 @@ class Engine(EngineBase):
         if device == "gpu":
             print("Use of deprecated keyword 'gpu' to set device. Using 'cuda' instead.", file=log.v1)
             device = "cuda"
-
         self._device = device
         if self._device == "cuda":
+            diagnose_gpu.print_available_devices(file=log.v2)
             if torch.cuda.is_available() and torch.cuda.device_count() > 0:
-                print(f"Using device {self._device}", file=log.v3)
+                diagnose_gpu.print_using_cuda_device_report(self._device, file=log.v2)
             else:
                 reasons = diagnose_gpu.diagnose_no_gpu()
                 raise Exception("No GPU device found, but config requested 'gpu' device.\n" + "\n".join(reasons))
-            diagnose_gpu.print_using_cuda_device_report(self._device, file=log.v2)
 
         self._amp_dtype = None  # type: Optional[torch.dtype]
 
