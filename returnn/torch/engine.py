@@ -26,7 +26,7 @@ from .updater import Updater
 from .data import pipeline as data_pipeline
 from .data import returnn_dataset_wrapper
 from .context import get_run_ctx, init_load_run_ctx, init_train_step_run_ctx, init_forward_step_run_ctx, RunCtx, Loss
-from .functional import diagnose_gpu
+from .util import diagnose_gpu
 
 
 class Engine(EngineBase):
