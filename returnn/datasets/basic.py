@@ -893,7 +893,6 @@ def init_dataset(kwargs, extra_kwargs=None, default_kwargs=None):
     assert kwargs
     if isinstance(kwargs, Dataset):
         data = kwargs
-        data.initialize()
         return data
     if callable(kwargs):
         return init_dataset(kwargs(), extra_kwargs=extra_kwargs, default_kwargs=default_kwargs)
@@ -916,8 +915,7 @@ def init_dataset(kwargs, extra_kwargs=None, default_kwargs=None):
         kwargs.update(extra_kwargs)
     obj = clazz(**kwargs)
     assert isinstance(obj, Dataset)
-    obj.initialize()
-    print(f"Initialized Dataset f{kwargs.get('name', '<unknown_name>')}")
+    print(f"Created Dataset f{kwargs.get('name', '<unknown_name>')}")
     print("  input:", obj.num_inputs, file=log.v2)
     print("  output:", obj.num_outputs, file=log.v2)
     print(" ", obj.len_info() or "no info", file=log.v2)
