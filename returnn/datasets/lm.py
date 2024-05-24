@@ -139,9 +139,11 @@ class LmDataset(CachedDataset2):
             # In this case, sentences end with self.word_end_symbol followed by the self.seq_end_symbol.
             self.parse_orth_opts.setdefault(
                 "postfix",
-                [self.word_end_symbol, self.seq_end_symbol]
-                if self.seq_end_symbol is not None
-                else [self.word_end_symbol],
+                (
+                    [self.word_end_symbol, self.seq_end_symbol]
+                    if self.seq_end_symbol is not None
+                    else [self.word_end_symbol]
+                ),
             )
         else:
             self.parse_orth_opts.setdefault("postfix", [self.seq_end_symbol] if self.seq_end_symbol is not None else [])
@@ -237,20 +239,25 @@ class LmDataset(CachedDataset2):
             self.num_outputs["delayed"] = self.num_outputs["data"]
             self.labels["delayed"] = self.labels["data"]
 
-        if isinstance(corpus_file, list):  # If a list of files is provided, concatenate all.
-            self.orths = []
-            for file_name in corpus_file:
-                self.orths += read_corpus(file_name, skip_empty_lines=skip_empty_lines)
-        else:
-            self.orths = read_corpus(corpus_file, skip_empty_lines=skip_empty_lines)
-        # It's only estimated because we might filter some out or so.
-        self._estimated_num_seqs = len(self.orths) // self.partition_epoch
-        print("  done, loaded %i sequences" % len(self.orths), file=log.v4)
-
         self.next_orth_idx = 0
         self.next_seq_idx = 0
         self.num_skipped = 0
         self.num_unknown = 0
+
+        self.orths = None
+
+    def _lazy_init(self):
+        if self.orths is not None:
+            return
+        if isinstance(self.corpus_file, list):  # If a list of files is provided, concatenate all.
+            self.orths = []
+            for file_name in self.corpus_file:
+                self.orths += read_corpus(file_name, skip_empty_lines=self.skip_empty_lines)
+        else:
+            self.orths = read_corpus(self.corpus_file, skip_empty_lines=self.skip_empty_lines)
+        # It's only estimated because we might filter some out or so.
+        self._estimated_num_seqs = len(self.orths) // self.partition_epoch
+        print("LM Dataset, loaded %i sequences" % len(self.orths), file=log.v4)
 
     def get_data_keys(self):
         """
@@ -286,6 +293,7 @@ class LmDataset(CachedDataset2):
         :rtype: bool
         :returns whether the order changed (True is always safe to return)
         """
+        self._lazy_init()
         if seq_list and not self.error_on_invalid_seq:
             print(
                 "Setting error_on_invalid_seq to True since a seq_list is given. "
