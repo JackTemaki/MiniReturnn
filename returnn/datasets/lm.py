@@ -102,7 +102,6 @@ class LmDataset(CachedDataset2):
         """
         super(LmDataset, self).__init__(**kwargs)
 
-
         if callable(corpus_file):
             corpus_file = corpus_file()
         if callable(orth_symbols_file):
