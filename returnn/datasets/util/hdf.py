@@ -75,7 +75,8 @@ class SimpleHDFWriter:
         # seq_length idx represents (seq_idx,data_key_idx),
         # where data_key_idx == 0 is for the main input data,
         # and otherwise data_key_idx == 1 + sorted(self._prepared_extra).index(data_key).
-        # data_key_idx must allow for 2 entries by default, as HDFDataset assumes 'classes' by default.
+        # data_key_idx must allow for 2 entries by default,
+        # as HDFDataset assumes 'classes' by default, as long as there is no targets/data or targets/labels.
         if extend_existing_file:
             self._seq_lengths = self._file["seqLengths"]
         else:
