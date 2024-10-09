@@ -229,7 +229,7 @@ def main():
 
     for seq in seqs:
         rec_filename = seq.recording_filename
-        assert os.path.isfile(rec_filename)
+        assert os.path.isfile(rec_filename) or args.no_ogg
         assert seq.start_time < seq.end_time and seq.delta_time > 0
         duration = seq.delta_time
         assert duration > 0
