@@ -2,6 +2,11 @@
 
 
 ## Current Master (0.5+git)
+ - Allow specifing file extensions for "load" (from upstream)
+ - Refactoring for vocabulary.py (from upstream)
+ - Fast HDF file access from upstream https://github.com/rwth-i6/returnn/pull/1532
+ - Faster laplace sorting from upstream
+ - Some very small dataset fixes from upstream
 
 ## Version 0.5
 
