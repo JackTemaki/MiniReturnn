@@ -1,7 +1,9 @@
 # Changelog
 
 
-## Current Master (0.4+git)
+## Current Master (0.5+git)
+
+## Version 0.5
 
 - Remove "Sprint" related code https://github.com/JackTemaki/MiniReturnn/pull/17
   - Remove everything related to RASR/Sprint interfacing
@@ -13,6 +15,7 @@
 - Fix that cleanup_old_models is always active
 - Fix for pickle error due to missing args stored in OggZipDataset caused by #1512
 - Add GPU prints from upstream (various commits, mainly diagnose_gpu.py)
+- Small fix in ogg-zip creation for bliss recordings without audio
 
 ## Version 0.4
 

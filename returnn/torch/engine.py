@@ -262,9 +262,11 @@ class Engine(EngineBase):
                     inv_norm_dict = NumbersDict(
                         {
                             # in case we have no inv norm factor we use 1 to normalize via the step count
-                            name: float(loss.inv_norm_factor.detach().cpu().numpy())
-                            if loss.inv_norm_factor is not None
-                            else 1
+                            name: (
+                                float(loss.inv_norm_factor.detach().cpu().numpy())
+                                if loss.inv_norm_factor is not None
+                                else 1
+                            )
                             for name, loss in ctx_losses_dict.items()
                         }
                     )

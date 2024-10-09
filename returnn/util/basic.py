@@ -1429,6 +1429,7 @@ def which(program):
     :return: full path, e.g. "/usr/bin/python", or None
     :rtype: str|None
     """
+
     # noinspection PyShadowingNames
     def is_exe(path):
         """
