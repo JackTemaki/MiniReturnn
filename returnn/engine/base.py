@@ -138,9 +138,9 @@ class EngineBase(object):
 
             assert os.path.exists(load_model_epoch_filename + cls.get_file_postfix()) or os.path.exists(
                 load_model_epoch_filename
-            ), "config option load=%r, file %r does not exist" % (
+            ), "config option load=%r, file[s] %r does not exist" % (
                 config.value("load", ""),
-                load_model_epoch_filename + cls.get_file_postfix(),
+                load_model_epoch_filename + "[" + cls.get_file_postfix() + "]",
             )
             # If "load" is given and we are not training, always load explicitly
             if config.value("task", "train") != "train":
