@@ -377,8 +377,8 @@ class Engine(EngineBase):
             dataset=batches_dataset,
             batch_size=None,
             num_workers=num_workers,
-            multiprocessing_context="spawn",
-            persistent_workers=True,
+            multiprocessing_context="spawn" if num_workers > 0 else None,
+            persistent_workers=num_workers > 0,
         )
 
     def run_train_step(
