@@ -185,6 +185,8 @@ class Updater(object):
                     self._num_invalid_gradients += 1
                     if self._num_invalid_gradients >= self._grad_clip_norm_invalid_gradient_threshold:
                         raise RuntimeError("Got %i invalid gradients in succession, abort training" % self._num_invalid_gradients)
+                else:
+                    self._num_invalid_gradients = 0
 
             # perform the actual gradient update on the parameters
             if self._grad_scaler is not None:
