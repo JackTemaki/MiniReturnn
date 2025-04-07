@@ -95,6 +95,8 @@ class Updater(object):
 
         self._grad_clip = self.config.float("gradient_clip", None)
         self._grad_clip_norm = self.config.float("gradient_clip_norm", None)
+        self._grad_clip_norm_invalid_gradient_threshold = self.config.int("gradient_clip_norm_invalid_gradient_threshold", 3)
+        self._num_invalid_gradients = 0
 
         self._accum_grad_multiple_step = config.int("accum_grad_multiple_step", 1)
 
@@ -175,15 +177,23 @@ class Updater(object):
             if self._grad_clip is not None:
                 torch.nn.utils.clip_grad_value_(self.network.parameters(), self._grad_clip)
 
+            has_invalid_gradient = False
             if self._grad_clip_norm is not None:
-                torch.nn.utils.clip_grad_norm_(self.network.parameters(), self._grad_clip_norm)
+                norm = torch.nn.utils.clip_grad_norm_(self.network.parameters(), self._grad_clip_norm)
+                has_invalid_gradient = torch.isnan(norm) or torch.isinf(norm)
+                if has_invalid_gradient:
+                    self._num_invalid_gradients += 1
+                    if self._num_invalid_gradients >= self._grad_clip_norm_invalid_gradient_threshold:
+                        raise RuntimeError("Got %i invalid gradients in succession, abort training" % self._num_invalid_gradients)
 
             # perform the actual gradient update on the parameters
             if self._grad_scaler is not None:
-                self._grad_scaler.step(self.optimizer)
+                if not has_invalid_gradient:
+                    self._grad_scaler.step(self.optimizer)
 
+                # even if we have an invalid gradient and drop the step we need to call update
                 self._grad_scaler.update()
-            else:
+            elif not has_invalid_gradient:
                 self.optimizer.step()
 
             # remove gradients at the end of gradient accumulation
