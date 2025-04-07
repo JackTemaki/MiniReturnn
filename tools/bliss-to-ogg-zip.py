@@ -147,6 +147,8 @@ def hms(s):
     :return: e.g. "1:23:45" (hs:ms:secs). see hms_fraction if you want to get fractional seconds
     :rtype: str
     """
+    if s == Decimal("Infinity"):
+        return "infinite"
     m, s = divmod(s, 60)
     h, m = divmod(m, 60)
     return "%d:%02d:%02d" % (h, m, s)

@@ -7,6 +7,8 @@
  - Fast HDF file access from upstream https://github.com/rwth-i6/returnn/pull/1532
  - Faster laplace sorting from upstream
  - Some very small dataset fixes from upstream
+ - Allow to use num_workers_per_gpu=0 for non-multiprocessed dataloading
+ - Fix error in bliss-to-ogg for bliss files with infinite duration
 
 ## Version 0.5
 
