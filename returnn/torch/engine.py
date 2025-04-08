@@ -485,7 +485,7 @@ class Engine(EngineBase):
 
         if checkpoint_state is not None:
             missing_keys, unexpected_keys = self._model.load_state_dict(checkpoint_state["model"], strict=False)
-            if missing_keys:
+            if missing_keys and not self.config.bool("load_ignore_missing_vars", False):
                 raise Exception(
                     "\n".join(
                         [
