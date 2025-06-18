@@ -9,6 +9,7 @@
  - Some very small dataset fixes from upstream
  - Allow to use num_workers_per_gpu=0 for non-multiprocessed dataloading
  - Fix error in bliss-to-ogg for bliss files with infinite duration
+ - Add `weights_only=False` for `torch.load` calls required for newer PyTorch versions
 
 ## Version 0.5
 

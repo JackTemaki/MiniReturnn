@@ -454,6 +454,7 @@ class Engine(EngineBase):
             checkpoint_state = torch.load(
                 load_filename,
                 map_location=self._device,
+                weights_only=False,
             )
 
             if epoch is None:
@@ -525,7 +526,7 @@ class Engine(EngineBase):
                     if is_training:
                         continue
                 print(f"Pre-load weights for key '{preload_key}' from {opts['filename']}", file=log.v3)
-                preload_model_state = torch.load(opts["filename"])
+                preload_model_state = torch.load(opts["filename"], weights_only=False)
                 if opts.get("checkpoint_key", "model") is not None:
                     # This can be used if an external checkpoint saves a checkpoint a different structure that just the
                     # model state dict. E.g., if a checkpoint is created using

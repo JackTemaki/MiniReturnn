@@ -71,7 +71,7 @@ def merge_checkpoints(in_ckpts: Sequence[str], out_ckpt: str, extra_state: Optio
         load_kwargs = dict(map_location=torch.device("cpu"), mmap=True)
         if torch_version < (2, 1):
             load_kwargs.pop("mmap")  # mmap flag only introduced from 2.1.0 onwards
-        in_state = torch.load(in_ckpt, **load_kwargs)
+        in_state = torch.load(in_ckpt, weights_only=False, **load_kwargs)
         assert isinstance(in_state, dict)
 
         assert "model" in in_state and isinstance(in_state["model"], dict)

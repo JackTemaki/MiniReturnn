@@ -129,7 +129,7 @@ class Updater(object):
         :param filename: File from which to load the optimizer state.
         """
         print("Load optimizer %s" % filename, file=log.v4)
-        optimizer_state = torch.load(filename, map_location=self._device)
+        optimizer_state = torch.load(filename, map_location=self._device, weights_only=False)
         self.optimizer.load_state_dict(optimizer_state)
         # https://github.com/rwth-i6/returnn/issues/1345
         del optimizer_state

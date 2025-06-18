@@ -30,7 +30,7 @@ def main():
     config = Config()
     config.load_file(args.config)
 
-    model_state = torch.load(args.checkpoint, map_location=torch.device(args.device))
+    model_state = torch.load(args.checkpoint, map_location=torch.device(args.device), weights_only=False)
     if isinstance(model_state, dict):
         epoch = model_state["epoch"]
         step = model_state["step"]
