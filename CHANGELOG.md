@@ -10,6 +10,7 @@
  - Allow to use num_workers_per_gpu=0 for non-multiprocessed dataloading
  - Fix error in bliss-to-ogg for bliss files with infinite duration
  - Add `weights_only=False` for `torch.load` calls required for newer PyTorch versions
+ - Check for empty score in model checkpoint cleanup from upstream https://github.com/rwth-i6/returnn/pull/1662
 
 ## Version 0.5
 
