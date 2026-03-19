@@ -50,6 +50,7 @@ class OggZipDataset(CachedDataset2):
         fixed_random_subset=None,
         fixed_random_subset_seed=42,
         epoch_wise_filter=None,
+        hash_seq_names=False,
         **kwargs,
     ):
         """
@@ -70,6 +71,8 @@ class OggZipDataset(CachedDataset2):
           It uses the fixed fixed_random_subset_seed as seed, i.e. it's deterministic.
         :param int fixed_random_subset_seed: Seed for drawing the fixed random subset, default 42
         :param dict|None epoch_wise_filter: see init_seq_order
+        :param bool hash_seq_names: Performs md5 hashing of seq_names. This can save memory when the seq_names are
+            extremely long, as any name is reduced to 32 characters.
         """
         import os
         import zipfile
@@ -79,6 +82,11 @@ class OggZipDataset(CachedDataset2):
         self._separate_txt_files = {}  # name -> filename
         self._path = path
         self._use_cache_manager = use_cache_manager
+        self._hash_seq_names = hash_seq_names
+        if self._hash_seq_names:
+            import hashlib
+            self._hash_func = hashlib.new("md5", usedforsecurity=False)
+
         if (
             isinstance(path, str)
             and os.path.splitext(path)[1] != ".zip"
@@ -215,6 +223,10 @@ class OggZipDataset(CachedDataset2):
             entry["_zip_file_index"] = zip_index
         if self.segments:
             data[:] = [entry for entry in data if self._get_tag_from_info_dict(entry) in self.segments]
+        if self._hash_seq_names:
+            for entry in data:
+                self._hash_func.update(entry["seq_name"].encode())
+                entry["seq_name"] = self._hash_func.hexdigest()
         return data
 
     def _collect_data(self):
