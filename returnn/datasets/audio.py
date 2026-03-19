@@ -3,6 +3,8 @@ Datasets dealing with audio
 """
 
 from __future__ import annotations
+
+import copy
 from typing import Optional
 import numpy
 import typing
@@ -75,7 +77,6 @@ class OggZipDataset(CachedDataset2):
             extremely long, as any name is reduced to 32 characters.
         """
         import os
-        import zipfile
         import returnn.util.basic
         from .meta import EpochWiseFilter
 
@@ -96,7 +97,7 @@ class OggZipDataset(CachedDataset2):
             # Special case (mostly for debugging) to directly access the filesystem, not via zip-file.
             self.paths = [os.path.dirname(path)]
             self._names = [os.path.basename(path)]
-            self._zip_files = None
+            self._zip_file_paths = None
             assert not use_cache_manager, "cache manager only for zip file"
         else:
             if not isinstance(path, (tuple, list)):
@@ -116,7 +117,7 @@ class OggZipDataset(CachedDataset2):
                 assert ext == ".zip"
                 self.paths.append(path_)
                 self._names.append(name)
-            self._zip_files = [zipfile.ZipFile(path) for path in self.paths]
+            self._zip_file_paths = copy.deepcopy(self.paths)
         self.segments = None  # type: typing.Optional[typing.Set[str]]
         self._segment_file = segment_file
         if segment_file:
@@ -181,6 +182,7 @@ class OggZipDataset(CachedDataset2):
         :rtype: bytes
         """
         import os
+        import zipfile
 
         if filename.endswith(".txt"):
             name, _ = os.path.splitext(filename)
@@ -189,14 +191,15 @@ class OggZipDataset(CachedDataset2):
                 import gzip
 
                 return gzip.open(self._separate_txt_files[name], "rb").read()
-        if self._zip_files is not None:
-            return self._zip_files[zip_index].read(filename)
+        if self._zip_file_paths is not None:
+            zip_file = zipfile.ZipFile(self._zip_file_paths[zip_index])
+            return zip_file.read(filename)
         return open("%s/%s" % (self.paths[0], filename), "rb").read()
 
     def _collect_data_part(self, zip_index):
         """
         collect all the entries of a single zip-file or txt file
-        :param int zip_index: index of the zip-file in self._zip_files, unused when loading without zip
+        :param int zip_index: index of the zip-file in self._zip_file_paths, unused when loading without zip
         :return: data entries
         :rtype: list[dict[str]]
         """
@@ -235,8 +238,8 @@ class OggZipDataset(CachedDataset2):
         :rtype: list[dict[str]]
         """
         data = []
-        if self._zip_files:
-            for zip_index in range(len(self._zip_files)):
+        if self._zip_file_paths:
+            for zip_index in range(len(self._zip_file_paths)):
                 zip_data = self._collect_data_part(zip_index)
                 data += zip_data
         else:
