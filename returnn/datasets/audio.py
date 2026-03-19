@@ -116,7 +116,15 @@ class OggZipDataset(CachedDataset2):
                 assert ext == ".zip"
                 self.paths.append(path_)
                 self._names.append(name)
-            self._zip_files = [zipfile.ZipFile(path) for path in self.paths]
+            zip_file_cache = {}
+            self._zip_files = []
+            for path in self.paths:
+                if path in zip_file_cache:
+                    self._zip_files.append(zip_file_cache[path])
+                else:
+                    zip_file = zipfile.ZipFile(path)
+                    zip_file_cache[path] = zip_file
+                    self._zip_files.append(zip_file)
         self.segments = None  # type: typing.Optional[typing.Set[str]]
         self._segment_file = segment_file
         if segment_file:
