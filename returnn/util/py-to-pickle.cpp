@@ -10,11 +10,12 @@
 // https://github.com/python/cpython/blob/master/Modules/_pickle.c
 // load_dict
 
+#include <assert.h>
+#include <cstdint>
 #include <string>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 const int protocol = 3;
 
